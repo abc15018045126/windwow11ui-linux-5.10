@@ -11,6 +11,7 @@ interface TaskbarProps {
   openApps: OpenApp[];
   activeAppInstanceId: string | null;
   onToggleStartMenu: () => void;
+  onAppIconClick: (app: AppDefinition, instanceId?: string) => void;
   pinnedAppIDs: string[];
   pinApp: (appId: string) => void;
   unpinApp: (appId: string) => void;
@@ -18,13 +19,13 @@ interface TaskbarProps {
   minimizeApp: (instanceId: string) => void;
   maximizeApp: (instanceId: string) => void;
   openApp: (appId: string | AppDefinition) => void;
-  focusApp: (instanceId: string) => void;
 }
 
 const Taskbar: React.FC<TaskbarProps> = ({
   openApps,
   activeAppInstanceId,
   onToggleStartMenu,
+  onAppIconClick,
   pinnedAppIDs,
   pinApp,
   unpinApp,
@@ -32,7 +33,6 @@ const Taskbar: React.FC<TaskbarProps> = ({
   minimizeApp,
   maximizeApp,
   openApp,
-  focusApp,
 }) => {
   const {apps: discoveredApps} = useContext(AppContext);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -74,25 +74,6 @@ const Taskbar: React.FC<TaskbarProps> = ({
 
     return Array.from(items.values());
   }, [pinnedAppIDs, openApps, discoveredApps]);
-
-  const handleAppIconClick = (appDef: AppDefinition, instance?: OpenApp) => {
-    if (instance) {
-      const app = instance;
-      if (app.isMinimized) {
-        // If the app is minimized, clicking its icon should restore and focus it.
-        minimizeApp(instance.instanceId); // This also focuses the app
-      } else if (activeAppInstanceId !== instance.instanceId) {
-        // If the app is open but not active, clicking its icon should focus it.
-        focusApp(instance.instanceId);
-      } else {
-        // If the app is already active, clicking its icon should minimize it.
-        minimizeApp(instance.instanceId);
-      }
-    } else {
-      // If the app is not open, clicking its icon should open it.
-      openApp(appDef);
-    }
-  };
 
   const handleContextMenu = (
     e: React.MouseEvent,
@@ -156,7 +137,12 @@ const Taskbar: React.FC<TaskbarProps> = ({
               return (
                 <button
                   key={appDef.id}
-                  onClick={() => handleAppIconClick(appDef, instance)}
+                  onClick={() =>
+                    onAppIconClick(
+                      appDef as AppDefinition,
+                      instance?.instanceId,
+                    )
+                  }
                   onContextMenu={e =>
                     handleContextMenu(e, appDef as AppDefinition, instance)
                   }
