@@ -51,39 +51,29 @@ const Taskbar: React.FC<TaskbarProps> = ({
   const taskbarItems = useMemo(() => {
     const items = new Map<
       string,
-      {appDef: DiscoveredAppDefinition; instance?: OpenApp}
+      {appDef: AppDefinition; instance?: OpenApp}
     >();
     const openAppMap = new Map(openApps.map(app => [app.id, app]));
 
-    // ---
-    // STEP 1: Add pinned applications to the taskbar.
-    // ---
-    const pinnedApps = discoveredApps.filter(
-      app => (app as any).isPinnedToTaskbar,
-    );
-    pinnedApps.forEach(appDef => {
-      // Use the app's unique ID as the key.
-      const key = (appDef as any).id;
-      items.set(key, {appDef, instance: openAppMap.get(key)});
+    // Step 1: Add all pinned apps to the taskbar.
+    // The `pinnedAppIDs` from the hook is the source of truth.
+    pinnedAppIDs.forEach(appId => {
+      const appDef = discoveredApps.find(app => app.id === appId);
+      if (appDef) {
+        items.set(appId, {appDef, instance: openAppMap.get(appId)});
+      }
     });
 
-    // ---
-    // STEP 2: Add any open applications that are not already pinned.
-    // ---
+    // Step 2: Add any currently open apps that are not already pinned.
     openApps.forEach(openApp => {
-      const key = openApp.id;
-      if (!items.has(key)) {
-        // Find the corresponding app definition. The `openApp` object itself
-        // is an `AppDefinition`, but we look in `discoveredApps` to be consistent.
-        const appDef = discoveredApps.find(app => (app as any).id === key);
-        if (appDef) {
-          items.set(key, {appDef, instance: openApp});
-        }
+      if (!items.has(openApp.id)) {
+        // The app definition is already part of the openApp object.
+        items.set(openApp.id, {appDef: openApp, instance: openApp});
       }
     });
 
     return Array.from(items.values());
-  }, [discoveredApps, openApps]);
+  }, [pinnedAppIDs, openApps, discoveredApps]);
 
   const handleContextMenu = (
     e: React.MouseEvent,

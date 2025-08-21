@@ -21,38 +21,51 @@ export const useWindowManager = (
   const [appsLoading, setAppsLoading] = useState(true);
   const [pinnedAppIDs, setPinnedAppIDs] = useState<string[]>([]);
 
-  // Load pinned apps from localStorage on initial mount
-  useEffect(() => {
-    try {
-      const storedPinnedApps = localStorage.getItem(PINNED_APPS_STORAGE_KEY);
-      if (storedPinnedApps) {
-        setPinnedAppIDs(JSON.parse(storedPinnedApps));
-      }
-    } catch (error) {
-      console.error('Failed to load pinned apps from localStorage:', error);
-    }
-  }, []);
-
   // Save pinned apps to localStorage whenever they change
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        PINNED_APPS_STORAGE_KEY,
-        JSON.stringify(pinnedAppIDs),
-      );
-    } catch (error) {
-      console.error('Failed to save pinned apps to localStorage:', error);
+    // Avoid saving the initial empty array before hydration from storage
+    if (pinnedAppIDs.length > 0) {
+      try {
+        localStorage.setItem(
+          PINNED_APPS_STORAGE_KEY,
+          JSON.stringify(pinnedAppIDs),
+        );
+      } catch (error) {
+        console.error('Failed to save pinned apps to localStorage:', error);
+      }
     }
   }, [pinnedAppIDs]);
 
   useEffect(() => {
-    const loadApps = async () => {
+    const loadData = async () => {
       setAppsLoading(true);
       const definitions = await getAppDefinitions();
       setAppDefinitions(definitions);
+
+      // Initialize pinned apps after definitions are loaded
+      try {
+        const storedPinnedApps = localStorage.getItem(PINNED_APPS_STORAGE_KEY);
+        if (storedPinnedApps) {
+          setPinnedAppIDs(JSON.parse(storedPinnedApps));
+        } else {
+          // If nothing is in storage (first run), initialize from app definitions
+          const defaultPinned = definitions
+            .filter(app => app.isPinnedToTaskbar)
+            .map(app => app.id);
+          setPinnedAppIDs(defaultPinned);
+        }
+      } catch (error) {
+        console.error('Failed to initialize pinned apps:', error);
+        // Fallback to default if storage is corrupted
+        const defaultPinned = definitions
+          .filter(app => app.isPinnedToTaskbar)
+          .map(app => app.id);
+        setPinnedAppIDs(defaultPinned);
+      }
+
       setAppsLoading(false);
     };
-    loadApps();
+    loadData();
   }, []);
 
   const pinApp = useCallback((appId: string) => {
