@@ -1,4 +1,4 @@
-import {useState, useCallback, useEffect} from 'react';
+import {useState, useCallback, useEffect, useMemo} from 'react';
 import {OpenApp, AppDefinition} from '../types';
 import {
   TASKBAR_HEIGHT,
@@ -6,6 +6,10 @@ import {
   DEFAULT_WINDOW_HEIGHT,
 } from '../constants';
 import {getAppDefinitions} from '../../components/apps';
+import {
+  fetchPinnedApps,
+  savePinnedApps as savePinnedAppsAPI,
+} from '../../services/filesystemService';
 
 export const useWindowManager = (
   desktopRef: React.RefObject<HTMLDivElement>,
@@ -14,18 +18,31 @@ export const useWindowManager = (
   const [activeAppInstanceId, setActiveAppInstanceId] = useState<string | null>(
     null,
   );
+  const [pinnedApps, setPinnedApps] = useState<string[]>([]);
   const [nextZIndex, setNextZIndex] = useState<number>(10);
   const [appDefinitions, setAppDefinitions] = useState<AppDefinition[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
 
   useEffect(() => {
-    const loadApps = async () => {
+    const loadInitialData = async () => {
       setAppsLoading(true);
-      const definitions = await getAppDefinitions();
-      setAppDefinitions(definitions);
-      setAppsLoading(false);
+      try {
+        const [definitions, fetchedPinnedApps] = await Promise.all([
+          getAppDefinitions(),
+          fetchPinnedApps(),
+        ]);
+        setAppDefinitions(definitions);
+        setPinnedApps(fetchedPinnedApps || []);
+      } catch (error) {
+        console.error('Failed to load initial app data:', error);
+        // Set defaults if loading fails
+        setAppDefinitions(await getAppDefinitions());
+        setPinnedApps([]);
+      } finally {
+        setAppsLoading(false);
+      }
     };
-    loadApps();
+    loadInitialData();
   }, []);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
@@ -156,19 +173,25 @@ export const useWindowManager = (
 
   const closeApp = useCallback(
     (instanceId: string) => {
-      setOpenApps(prev => prev.filter(app => app.instanceId !== instanceId));
-      if (activeAppInstanceId === instanceId) {
-        const remainingApps = openApps.filter(
+      setOpenApps(prevOpenApps => {
+        const remainingApps = prevOpenApps.filter(
           app => app.instanceId !== instanceId,
         );
-        const nextActiveApp =
-          remainingApps.length > 0
-            ? remainingApps[remainingApps.length - 1].instanceId
-            : null;
-        setActiveAppInstanceId(nextActiveApp);
-      }
+
+        if (activeAppInstanceId === instanceId) {
+          const nextActiveApp =
+            remainingApps.length > 0
+              ? remainingApps.sort((a, b) => a.zIndex - b.zIndex)[
+                  remainingApps.length - 1
+                ]?.instanceId
+              : null;
+          setActiveAppInstanceId(nextActiveApp);
+        }
+
+        return remainingApps;
+      });
     },
-    [activeAppInstanceId, openApps],
+    [activeAppInstanceId],
   );
 
   const toggleMinimizeApp = useCallback(
@@ -265,6 +288,61 @@ export const useWindowManager = (
     );
   }, []);
 
+  const savePinnedApps = async (newPinnedApps: string[]) => {
+    try {
+      await savePinnedAppsAPI(newPinnedApps);
+    } catch (error) {
+      console.error('Failed to save pinned apps:', error);
+      // Optionally, handle the error in the UI
+    }
+  };
+
+  const pinApp = (appId: string) => {
+    if (pinnedApps.includes(appId)) return;
+    const newPinnedApps = [...pinnedApps, appId];
+    setPinnedApps(newPinnedApps);
+    savePinnedApps(newPinnedApps);
+  };
+
+  const unpinApp = (appId: string) => {
+    if (!pinnedApps.includes(appId)) return;
+    const newPinnedApps = pinnedApps.filter(id => id !== appId);
+    setPinnedApps(newPinnedApps);
+    savePinnedApps(newPinnedApps);
+  };
+
+  const taskbarApps = useMemo(() => {
+    const apps = new Map<
+      string,
+      (AppDefinition | OpenApp) & {isOpen: boolean; isActive: boolean}
+    >();
+
+    // 1. Add all pinned apps, ensuring they have a base definition
+    pinnedApps.forEach(appId => {
+      const appDef = appDefinitions.find(def => def.id === appId);
+      if (appDef) {
+        apps.set(appId, {
+          ...appDef,
+          isOpen: false,
+          isActive: false,
+        });
+      }
+    });
+
+    // 2. Add all open apps, which will overwrite the pinned placeholders
+    //    This ensures that if an app is pinned, we use the more detailed
+    //    'OpenApp' state when it's running.
+    openApps.forEach(openApp => {
+      apps.set(openApp.id, {
+        ...openApp,
+        isOpen: true,
+        isActive: openApp.instanceId === activeAppInstanceId,
+      });
+    });
+
+    return Array.from(apps.values());
+  }, [pinnedApps, openApps, appDefinitions, activeAppInstanceId]);
+
   // The hook returns everything the App component needs
   return {
     openApps,
@@ -280,5 +358,9 @@ export const useWindowManager = (
     updateAppPosition,
     updateAppSize,
     updateAppTitle,
+    pinnedApps,
+    pinApp,
+    unpinApp,
+    taskbarApps,
   };
 };

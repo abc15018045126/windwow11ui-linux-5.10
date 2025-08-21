@@ -179,6 +179,37 @@ function startApiServer() {
     }
   });
 
+  // Pinned Apps Endpoints
+  const PINNED_APPS_PATH = path.join(FS_ROOT, 'main', 'data', 'pinned-apps.json');
+
+  apiApp.get('/api/pinned-apps', async (req, res) => {
+    try {
+      const data = await fs.promises.readFile(PINNED_APPS_PATH, 'utf-8');
+      res.json(JSON.parse(data));
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        res.json([]); // File doesn't exist, return empty array
+      } else {
+        console.error('API Error getting pinned apps:', error);
+        res.status(500).json({ error: 'Failed to get pinned apps' });
+      }
+    }
+  });
+
+  apiApp.post('/api/pinned-apps', async (req, res) => {
+    const { pinnedAppIds } = req.body;
+    if (!Array.isArray(pinnedAppIds)) {
+      return res.status(400).json({ error: 'Invalid payload: pinnedAppIds must be an array.' });
+    }
+    try {
+      await fs.promises.writeFile(PINNED_APPS_PATH, JSON.stringify(pinnedAppIds, null, 2));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('API Error saving pinned apps:', error);
+      res.status(500).json({ error: 'Failed to save pinned apps' });
+    }
+  });
+
   // All filesystem APIs are prefixed with /api/fs
   apiApp.use('/api/fs', fsRouter);
 
