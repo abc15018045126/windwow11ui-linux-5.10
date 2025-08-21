@@ -10,6 +10,7 @@ export const lightTheme: Theme = {
     buttonHover: 'hover:bg-black/10',
     activeButton: 'bg-black/20',
     activeIndicator: 'bg-blue-600',
+    openIndicator: 'bg-gray-400',
     textColor: 'text-black',
   },
   startMenu: {

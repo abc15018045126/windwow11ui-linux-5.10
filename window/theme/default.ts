@@ -10,6 +10,7 @@ export const defaultTheme: Theme = {
     buttonHover: 'hover:bg-white/20',
     activeButton: 'bg-white/30',
     activeIndicator: 'bg-blue-400',
+    openIndicator: 'bg-gray-500',
     textColor: 'text-white',
   },
   startMenu: {

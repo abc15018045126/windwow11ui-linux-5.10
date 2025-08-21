@@ -11,6 +11,7 @@ import {useWindowManager} from './hooks/useWindowManager';
 
 const App: React.FC = () => {
   const desktopRef = useRef<HTMLDivElement>(null);
+  const windowManager = useWindowManager(desktopRef);
   const {
     openApps,
     activeAppInstanceId,
@@ -24,7 +25,7 @@ const App: React.FC = () => {
     updateAppPosition,
     updateAppSize,
     updateAppTitle,
-  } = useWindowManager(desktopRef);
+  } = windowManager;
 
   const [isStartMenuOpen, setIsStartMenuOpen] = useState<boolean>(false);
   const [clipboard, setClipboard] = useState<ClipboardItem | null>(null);
@@ -151,23 +152,8 @@ const App: React.FC = () => {
               )}
 
               <Taskbar
-                openApps={openApps}
-                activeAppInstanceId={activeAppInstanceId}
                 onToggleStartMenu={toggleStartMenu}
-                onAppIconClick={(appId, instanceId) => {
-                  if (instanceId) {
-                    const app = openApps.find(a => a.instanceId === instanceId);
-                    if (app?.isMinimized) {
-                      toggleMinimizeApp(instanceId);
-                    } else if (activeAppInstanceId !== instanceId) {
-                      focusApp(instanceId);
-                    } else {
-                      toggleMinimizeApp(instanceId);
-                    }
-                  } else {
-                    openApp(appId);
-                  }
-                }}
+                windowManager={windowManager}
               />
             </>
           )}
