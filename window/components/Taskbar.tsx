@@ -98,7 +98,7 @@ const Taskbar: React.FC<TaskbarProps> = ({
                   title={app.name}
                 >
                   <Icon iconName={app.icon} className="w-5 h-5" isSmall />
-                  {(app.isOpen || isPinned) && (
+                  {app.isOpen && (
                     <span
                       className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-1 rounded-t-sm
                                   ${app.isActive ? 'w-6 ' + theme.taskbar.activeIndicator : 'w-4 ' + theme.taskbar.openIndicator}`}
