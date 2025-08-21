@@ -207,19 +207,28 @@ export const useWindowManager = (
 
   const closeApp = useCallback(
     (instanceId: string) => {
-      setOpenApps(prev => prev.filter(app => app.instanceId !== instanceId));
+      const appToClose = openApps.find(app => app.instanceId === instanceId);
+      if (!appToClose) return;
+
+      const updatedOpenApps = openApps.filter(
+        app => app.instanceId !== instanceId,
+      );
+      setOpenApps(updatedOpenApps);
+
       if (activeAppInstanceId === instanceId) {
-        const remainingApps = openApps.filter(
-          app => app.instanceId !== instanceId,
-        );
-        const nextActiveApp =
-          remainingApps.length > 0
-            ? remainingApps[remainingApps.length - 1].instanceId
-            : null;
-        setActiveAppInstanceId(nextActiveApp);
+        if (updatedOpenApps.length > 0) {
+          // Find the app with the highest z-index among the remaining ones to activate next.
+          const nextActiveApp = updatedOpenApps.reduce((prev, current) =>
+            prev.zIndex > current.zIndex ? prev : current,
+          );
+          setActiveAppInstanceId(nextActiveApp.instanceId);
+        } else {
+          // No apps left, so no active app.
+          setActiveAppInstanceId(null);
+        }
       }
     },
-    [activeAppInstanceId, openApps],
+    [openApps, activeAppInstanceId],
   );
 
   const toggleMinimizeApp = useCallback(
