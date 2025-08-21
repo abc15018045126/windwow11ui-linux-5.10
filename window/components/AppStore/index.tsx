@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import {AppDefinition, AppComponentProps} from '../../../types';
+import React, {useState, useEffect, useCallback} from 'react';
+import {AppComponentProps} from '../../../types';
 import {RefreshIcon, HyperIcon} from '../../../constants';
 import Icon from './icon';
 
@@ -44,7 +45,7 @@ const AppStoreApp: React.FC<AppComponentProps> = ({setTitle}) => {
       alert(
         `App ${app.name} installed successfully! You may need to restart the application to see it in the Start Menu.`,
       );
-      // Refresh the list to show the new "Installed" state
+      // Refresh the store's list to show the new "Installed" state
       fetchAvailableApps();
     } catch (error) {
       console.error('Error installing app:', error);

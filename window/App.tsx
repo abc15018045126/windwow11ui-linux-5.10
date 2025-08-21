@@ -24,9 +24,6 @@ const App: React.FC = () => {
     updateAppPosition,
     updateAppSize,
     updateAppTitle,
-    pinnedAppIDs,
-    pinApp,
-    unpinApp,
   } = useWindowManager(desktopRef);
 
   const [isStartMenuOpen, setIsStartMenuOpen] = useState<boolean>(false);
@@ -135,9 +132,7 @@ const App: React.FC = () => {
                       onResize={updateAppSize}
                       isActive={app.instanceId === activeAppInstanceId}
                       desktopRef={desktopRef}
-                      onSetTitle={newTitle =>
-                        updateAppTitle(app.instanceId, newTitle)
-                      }
+                      updateAppTitle={updateAppTitle}
                       onWallpaperChange={() => {}} // This is now handled by themes app
                       openApp={openApp}
                       clipboard={clipboard}
@@ -159,31 +154,20 @@ const App: React.FC = () => {
                 openApps={openApps}
                 activeAppInstanceId={activeAppInstanceId}
                 onToggleStartMenu={toggleStartMenu}
-                onAppIconClick={(appDef, instanceId) => {
+                onAppIconClick={(appId, instanceId) => {
                   if (instanceId) {
                     const app = openApps.find(a => a.instanceId === instanceId);
                     if (app?.isMinimized) {
-                      // If the app is minimized, clicking its icon should restore and focus it.
-                      toggleMinimizeApp(instanceId); // This also focuses the app
+                      toggleMinimizeApp(instanceId);
                     } else if (activeAppInstanceId !== instanceId) {
-                      // If the app is open but not active, clicking its icon should focus it.
                       focusApp(instanceId);
                     } else {
-                      // If the app is already active, clicking its icon should minimize it.
                       toggleMinimizeApp(instanceId);
                     }
                   } else {
-                    // If the app is not open, clicking its icon should open it.
-                    openApp(appDef);
+                    openApp(appId);
                   }
                 }}
-                pinnedAppIDs={pinnedAppIDs}
-                pinApp={pinApp}
-                unpinApp={unpinApp}
-                closeApp={closeApp}
-                openApp={openApp}
-                minimizeApp={toggleMinimizeApp}
-                maximizeApp={toggleMaximizeApp}
               />
             </>
           )}

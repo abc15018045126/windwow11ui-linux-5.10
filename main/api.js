@@ -33,11 +33,18 @@ function startApiServer() {
       const appsDir = path.join(FS_ROOT, 'components', 'apps');
       const entries = await fs.promises.readdir(appsDir, {withFileTypes: true});
 
-      const tsxFiles = new Set(
-        entries
-          .filter(e => e.isFile() && e.name.endsWith('App.tsx'))
-          .map(e => e.name),
-      );
+      const registryPath = path.join(FS_ROOT, 'main', 'data', 'external-apps.json');
+      let installedIds = new Set();
+      try {
+        const data = await fs.promises.readFile(registryPath, 'utf-8');
+        const installedApps = JSON.parse(data);
+        installedIds = new Set(installedApps.map(app => app.id));
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          console.error('Could not read external app registry for checking installed status:', error);
+        }
+        // If file doesn't exist, installedIds remains an empty set, which is correct.
+      }
 
       const appPromises = entries
         .filter(entry => entry.isDirectory())
@@ -55,11 +62,12 @@ function startApiServer() {
               'utf-8',
             );
             const pkg = JSON.parse(content);
+            const appId = dir.name.toLowerCase();
 
-            const isInstalled = tsxFiles.has(`${dir.name}App.tsx`);
+            const isInstalled = installedIds.has(appId);
 
             return {
-              id: dir.name.toLowerCase(),
+              id: appId,
               name: dir.name,
               description: pkg.description || 'A discovered application.',
               version: pkg.version || '1.0.0',
@@ -81,52 +89,77 @@ function startApiServer() {
     }
   });
 
-  // Endpoint to "install" an app by creating its .tsx file
+  // API Endpoint to get the list of externally registered apps
+  apiApp.get('/api/apps/external', async (req, res) => {
+    try {
+      const filePath = path.join(FS_ROOT, 'main', 'data', 'external-apps.json');
+      const data = await fs.promises.readFile(filePath, 'utf-8');
+      res.setHeader('Content-Type', 'application/json');
+      res.send(data);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        // If the file doesn't exist, return an empty array, which is valid.
+        res.json([]);
+      } else {
+        console.error('API Error getting external app list:', error);
+        res.status(500).json({error: 'Failed to get external app list'});
+      }
+    }
+  });
+
+  // Endpoint to "install" an app by adding it to the external-apps.json registry
   apiApp.post('/api/install', async (req, res) => {
-    const {id, name, path: appPath} = req.body;
+    const {id, name, path: appPath, version, description} = req.body;
     if (!id || !name || !appPath) {
       return res
         .status(400)
         .json({error: 'Missing required app details for installation.'});
     }
 
-    const componentName = `${name}App`;
-    const tsxFilePath = path.join(
-      FS_ROOT,
-      'components',
-      'apps',
-      `${componentName}.tsx`,
-    );
-
-    const tsxContent = `
-import React from 'react';
-import { AppDefinition, AppComponentProps } from '../../window/types';
-import { HyperIcon } from '../../window/constants'; // Using a generic icon
-
-const ${componentName}: React.FC<AppComponentProps> = () => {
-  // This component can be minimal as it's for an external app
-  return null;
-};
-
-export const appDefinition: AppDefinition = {
-  id: '${id}',
-  name: '${name}',
-  icon: 'hyper', // Assign a generic icon name as a string
-  isExternal: true,
-  externalPath: '${appPath}',
-  component: ${componentName},
-};
-
-export default ${componentName};
-`;
+    const registryPath = path.join(FS_ROOT, 'main', 'data', 'external-apps.json');
+    const componentName = name.replace(/-/g, ''); // Sanitize name for JS variable
 
     try {
-      await fs.promises.writeFile(tsxFilePath, tsxContent.trim());
-      console.log(`Successfully created ${tsxFilePath}`);
-      res.status(201).json({success: true, message: `App ${name} installed.`});
+      let registry = [];
+      try {
+        const data = await fs.promises.readFile(registryPath, 'utf-8');
+        registry = JSON.parse(data);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        // File doesn't exist, we'll create it with the new app.
+      }
+
+      const isAlreadyInstalled = registry.some(app => app.id === id);
+      if (isAlreadyInstalled) {
+        return res
+          .status(409)
+          .json({error: `App "${name}" is already installed.`});
+      }
+
+      const newAppEntry = {
+        id,
+        name,
+        icon: id, // Use the app's ID as a default icon identifier
+        isExternal: true,
+        externalPath: path.join(appPath, 'main.js'), // Point to the conventional entry point
+        version: version || '1.0.0',
+        description: description || 'An installed external application.',
+      };
+
+      registry.push(newAppEntry);
+
+      await fs.promises.writeFile(
+        registryPath,
+        JSON.stringify(registry, null, 2),
+      );
+
+      console.log(`Successfully added "${name}" to the external app registry.`);
+      res
+        .status(201)
+        .json({success: true, message: `App "${name}" installed.`});
     } catch (error) {
-      console.error(`Failed to write TSX file for ${name}:`, error);
-      res.status(500).json({error: `Failed to install app ${name}.`});
+      console.error(`Failed to install app "${name}":`, error);
+      res.status(500).json({error: `Failed to install app "${name}".`});
     }
   });
 

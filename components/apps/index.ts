@@ -13,40 +13,50 @@ function hasAppDefinition(
   );
 }
 
-export const getAppDefinitions = async (): Promise<AppDefinition[]> => {
-  if (appDefinitions) {
+export const getAppDefinitions = async (
+  forceRefresh = false,
+): Promise<AppDefinition[]> => {
+  if (appDefinitions && !forceRefresh) {
     return appDefinitions;
   }
 
-  // Use import.meta.glob to dynamically find all App.tsx files
-  const appModules = import.meta.glob([
+  // Use import.meta.glob to dynamically find all App.tsx files for internal apps
+  const internalAppModules = import.meta.glob([
     './*App.tsx',
     '../../window/components/**/*App.tsx',
     '../../window/components/*App.tsx',
   ]);
 
-  const definitions: AppDefinition[] = [];
-  for (const path in appModules) {
-    const module = await appModules[path]();
+  const internalDefinitions: AppDefinition[] = [];
+  for (const path in internalAppModules) {
+    const module = await internalAppModules[path]();
     if (hasAppDefinition(module)) {
-      definitions.push(module.appDefinition);
+      internalDefinitions.push(module.appDefinition);
     }
   }
 
-  // Manually add the external Chrome5 app definition, as it doesn't have a .tsx file
-  // and cannot be discovered by the glob pattern.
-  const chrome5AppDefinition: AppDefinition = {
-    id: 'chrome5',
-    name: 'Chrome 5',
-    icon: 'chrome5',
-    component: () => null, // Dummy component for external app
-    isExternal: true,
-    externalPath: 'components/apps/Chrome5/main.js',
-  };
-  definitions.push(chrome5AppDefinition);
+  // Fetch the list of registered external apps from our new JSON-based registry
+  let externalDefinitions: AppDefinition[] = [];
+  try {
+    const response = await fetch('http://localhost:3001/api/apps/external');
+    if (response.ok) {
+      const externalAppsData = await response.json();
+      // Add the dummy component property required by the AppDefinition type
+      externalDefinitions = externalAppsData.map((app: any) => ({
+        ...app,
+        component: () => null,
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to fetch external apps:', error);
+    // Continue without external apps if the fetch fails
+  }
+
+  // Combine internal and external app definitions
+  const allDefinitions = [...internalDefinitions, ...externalDefinitions];
 
   // Cache the definitions so we don't reload them on every call
-  appDefinitions = definitions.sort((a, b) => a.name.localeCompare(b.name));
+  appDefinitions = allDefinitions.sort((a, b) => a.name.localeCompare(b.name));
 
   return appDefinitions;
 };

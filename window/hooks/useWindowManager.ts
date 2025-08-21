@@ -7,8 +7,6 @@ import {
 } from '../constants';
 import {getAppDefinitions} from '../../components/apps';
 
-const PINNED_APPS_STORAGE_KEY = 'win11-clone-pinned-apps';
-
 export const useWindowManager = (
   desktopRef: React.RefObject<HTMLDivElement>,
 ) => {
@@ -19,64 +17,15 @@ export const useWindowManager = (
   const [nextZIndex, setNextZIndex] = useState<number>(10);
   const [appDefinitions, setAppDefinitions] = useState<AppDefinition[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
-  const [pinnedAppIDs, setPinnedAppIDs] = useState<string[]>([]);
-
-  // Save pinned apps to localStorage whenever they change
-  useEffect(() => {
-    // Avoid saving the initial empty array before hydration from storage
-    if (pinnedAppIDs.length > 0) {
-      try {
-        localStorage.setItem(
-          PINNED_APPS_STORAGE_KEY,
-          JSON.stringify(pinnedAppIDs),
-        );
-      } catch (error) {
-        console.error('Failed to save pinned apps to localStorage:', error);
-      }
-    }
-  }, [pinnedAppIDs]);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadApps = async () => {
       setAppsLoading(true);
       const definitions = await getAppDefinitions();
       setAppDefinitions(definitions);
-
-      // Initialize pinned apps after definitions are loaded
-      try {
-        const storedPinnedApps = localStorage.getItem(PINNED_APPS_STORAGE_KEY);
-        if (storedPinnedApps) {
-          setPinnedAppIDs(JSON.parse(storedPinnedApps));
-        } else {
-          // If nothing is in storage (first run), initialize from app definitions
-          const defaultPinned = definitions
-            .filter(app => app.isPinnedToTaskbar)
-            .map(app => app.id);
-          setPinnedAppIDs(defaultPinned);
-        }
-      } catch (error) {
-        console.error('Failed to initialize pinned apps:', error);
-        // Fallback to default if storage is corrupted
-        const defaultPinned = definitions
-          .filter(app => app.isPinnedToTaskbar)
-          .map(app => app.id);
-        setPinnedAppIDs(defaultPinned);
-      }
-
       setAppsLoading(false);
     };
-    loadData();
-  }, []);
-
-  const pinApp = useCallback((appId: string) => {
-    setPinnedAppIDs(prev => {
-      if (prev.includes(appId)) return prev;
-      return [...prev, appId];
-    });
-  }, []);
-
-  const unpinApp = useCallback((appId: string) => {
-    setPinnedAppIDs(prev => prev.filter(id => id !== appId));
+    loadApps();
   }, []);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
@@ -97,47 +46,6 @@ export const useWindowManager = (
       y: Math.max(0, Math.min(yOffset + baseOffset, desktopHeight - appHeight)),
     };
   };
-
-  const focusApp = useCallback(
-    (instanceId: string) => {
-      if (activeAppInstanceId === instanceId) return;
-
-      const newZIndex = nextZIndex + 1;
-      setNextZIndex(newZIndex);
-      setOpenApps(prev =>
-        prev.map(app =>
-          app.instanceId === instanceId
-            ? {...app, zIndex: newZIndex, isMinimized: false}
-            : app,
-        ),
-      );
-      setActiveAppInstanceId(instanceId);
-    },
-    [activeAppInstanceId, nextZIndex],
-  );
-
-  const toggleMinimizeApp = useCallback(
-    (instanceId: string) => {
-      const app = openApps.find(a => a.instanceId === instanceId);
-      if (!app) return;
-
-      setOpenApps(prev =>
-        prev.map(a => {
-          if (a.instanceId === instanceId) {
-            return {...a, isMinimized: !a.isMinimized};
-          }
-          return a;
-        }),
-      );
-
-      if (app.isMinimized) {
-        focusApp(instanceId);
-      } else if (activeAppInstanceId === instanceId) {
-        setActiveAppInstanceId(null);
-      }
-    },
-    [openApps, activeAppInstanceId, focusApp],
-  );
 
   const openApp = useCallback(
     async (appIdentifier: string | AppDefinition, initialData?: any) => {
@@ -225,33 +133,65 @@ export const useWindowManager = (
       setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
       setActiveAppInstanceId(instanceId);
     },
-    [appDefinitions, openApps, nextZIndex, focusApp, toggleMinimizeApp],
+    [appDefinitions, nextZIndex, openApps],
+  );
+
+  const focusApp = useCallback(
+    (instanceId: string) => {
+      if (activeAppInstanceId === instanceId) return;
+
+      const newZIndex = nextZIndex + 1;
+      setNextZIndex(newZIndex);
+      setOpenApps(prev =>
+        prev.map(app =>
+          app.instanceId === instanceId
+            ? {...app, zIndex: newZIndex, isMinimized: false}
+            : app,
+        ),
+      );
+      setActiveAppInstanceId(instanceId);
+    },
+    [activeAppInstanceId, nextZIndex],
   );
 
   const closeApp = useCallback(
     (instanceId: string) => {
-      const appToClose = openApps.find(app => app.instanceId === instanceId);
-      if (!appToClose) return;
-
-      const updatedOpenApps = openApps.filter(
-        app => app.instanceId !== instanceId,
-      );
-      setOpenApps(updatedOpenApps);
-
+      setOpenApps(prev => prev.filter(app => app.instanceId !== instanceId));
       if (activeAppInstanceId === instanceId) {
-        if (updatedOpenApps.length > 0) {
-          // Find the app with the highest z-index among the remaining ones to activate next.
-          const nextActiveApp = updatedOpenApps.reduce((prev, current) =>
-            prev.zIndex > current.zIndex ? prev : current,
-          );
-          setActiveAppInstanceId(nextActiveApp.instanceId);
-        } else {
-          // No apps left, so no active app.
-          setActiveAppInstanceId(null);
-        }
+        const remainingApps = openApps.filter(
+          app => app.instanceId !== instanceId,
+        );
+        const nextActiveApp =
+          remainingApps.length > 0
+            ? remainingApps[remainingApps.length - 1].instanceId
+            : null;
+        setActiveAppInstanceId(nextActiveApp);
       }
     },
-    [openApps, activeAppInstanceId],
+    [activeAppInstanceId, openApps],
+  );
+
+  const toggleMinimizeApp = useCallback(
+    (instanceId: string) => {
+      const app = openApps.find(a => a.instanceId === instanceId);
+      if (!app) return;
+
+      setOpenApps(prev =>
+        prev.map(a => {
+          if (a.instanceId === instanceId) {
+            return {...a, isMinimized: !a.isMinimized};
+          }
+          return a;
+        }),
+      );
+
+      if (app.isMinimized) {
+        focusApp(instanceId);
+      } else if (activeAppInstanceId === instanceId) {
+        setActiveAppInstanceId(null);
+      }
+    },
+    [openApps, activeAppInstanceId, focusApp],
   );
 
   const toggleMaximizeApp = useCallback(
@@ -296,7 +236,7 @@ export const useWindowManager = (
         }),
       );
     },
-    [nextZIndex],
+    [nextZIndex, openApps],
   );
 
   const updateAppPosition = useCallback(
@@ -340,8 +280,5 @@ export const useWindowManager = (
     updateAppPosition,
     updateAppSize,
     updateAppTitle,
-    pinnedAppIDs,
-    pinApp,
-    unpinApp,
   };
 };
