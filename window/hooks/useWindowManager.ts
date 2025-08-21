@@ -5,7 +5,7 @@ import {
   DEFAULT_WINDOW_WIDTH,
   DEFAULT_WINDOW_HEIGHT,
 } from '../constants';
-import {getAppDefinitions} from '../../components/apps';
+import {getAppDefinitions} from '../components/apps';
 
 export const useWindowManager = (
   desktopRef: React.RefObject<HTMLDivElement>,
@@ -26,6 +26,48 @@ export const useWindowManager = (
       setAppsLoading(false);
     };
     loadApps();
+
+    const handleAppLaunched = (launchedAppDef: AppDefinition & {pid: number}) => {
+      console.log('App launched event received in renderer:', launchedAppDef);
+      const instanceId = `external-${launchedAppDef.pid}`;
+
+      const newApp: OpenApp = {
+        ...launchedAppDef,
+        instanceId,
+        pid: launchedAppDef.pid,
+        zIndex: 0, // Will be managed by focusApp
+        position: {x: 50, y: 50}, // Placeholder position
+        size: {
+          width:
+            launchedAppDef.defaultSize?.width ||
+            DEFAULT_WINDOW_WIDTH,
+          height:
+            launchedAppDef.defaultSize?.height ||
+            DEFAULT_WINDOW_HEIGHT,
+        },
+        isMinimized: false,
+        isMaximized: false,
+        title: launchedAppDef.name,
+      };
+
+      setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
+      focusApp(instanceId);
+    };
+
+    const handleAppClosed = (pid: number) => {
+      console.log('App closed event received in renderer for pid:', pid);
+      setOpenApps(prev => prev.filter(app => app.pid !== pid));
+    };
+
+    const removeLaunchedListener =
+      window.electronAPI?.onAppLaunched(handleAppLaunched);
+    const removeClosedListener =
+      window.electronAPI?.onAppClosed(handleAppClosed);
+
+    return () => {
+      removeLaunchedListener?.();
+      removeClosedListener?.();
+    };
   }, []);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
@@ -48,8 +90,11 @@ export const useWindowManager = (
   };
 
   const openApp = useCallback(
-    async (appIdentifier: string | AppDefinition, initialData?: any) => {
-      let appDef: AppDefinition | undefined;
+    async (
+      appIdentifier: string | AppDefinition | DiscoveredAppDefinition,
+      initialData?: any,
+    ) => {
+      let appDef: (AppDefinition | DiscoveredAppDefinition) | undefined;
 
       if (typeof appIdentifier === 'string') {
         appDef = appDefinitions.find(app => app.id === appIdentifier);
@@ -72,18 +117,13 @@ export const useWindowManager = (
 
       if (appDef.isExternal && appDef.externalPath) {
         if (window.electronAPI?.launchExternalApp) {
-          window.electronAPI.launchExternalApp(appDef.externalPath);
+          // The app is now launched, and the 'app-launched' event will handle adding it to the state
+          window.electronAPI.launchExternalApp(appDef as AppDefinition);
         } else {
-          fetch('http://localhost:3001/api/launch', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({path: appDef.externalPath}),
-          }).catch(error => {
-            console.error('Failed to launch external app via API:', error);
-            alert(
-              'Failed to launch application. Ensure the backend server is running.',
-            );
-          });
+          // Fallback for non-electron environment (e.g. web browser)
+          console.warn(
+            'Electron API not available. Using fallback for external app launch.',
+          );
         }
         return;
       }

@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
-import {AppDefinition, AppComponentProps} from '../../window/types';
+import {AppDefinition, AppComponentProps} from '../../types';
 import {readFile, saveFile} from '../../../services/filesystemService';
 import {NotebookIcon} from '../../constants';
 

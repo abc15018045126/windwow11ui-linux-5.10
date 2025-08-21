@@ -2,8 +2,9 @@ const {ipcMain, session} = require('electron');
 const {launchExternalAppByPath} = require('./launcher');
 
 function initializeIpcHandlers() {
-  ipcMain.handle('app:launchExternal', (event, relativeAppPath, args) => {
-    return launchExternalAppByPath(relativeAppPath, args);
+  // No longer returns a value, so we use .on instead of .handle
+  ipcMain.on('app:launchExternal', (event, appDef, args) => {
+    launchExternalAppByPath(event.sender, appDef, args);
   });
 
   // Handle setting a proxy for a specific webview session

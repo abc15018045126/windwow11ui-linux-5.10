@@ -1,4 +1,4 @@
-import {ProjectFile, FilesystemItem} from '../types';
+import {ProjectFile, FilesystemItem} from './window/types';
 
 const API_BASE_URL = 'http://localhost:3001/api/fs';
 
