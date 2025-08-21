@@ -1,10 +1,11 @@
 import React, {useState, useMemo, useContext} from 'react';
-import {DiscoveredAppDefinition, AppContext} from '../contexts/AppContext';
+import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
+import {AppDefinition} from '../types';
 
 interface StartMenuProps {
-  onOpenApp: (app: DiscoveredAppDefinition) => void;
+  onOpenApp: (app: AppDefinition) => void;
   onClose: () => void;
 }
 
@@ -14,11 +15,11 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
   const {theme} = useTheme();
 
   const pinnedApps = useMemo(
-    () => apps.filter(app => app.isPinned).slice(0, 12),
+    () => apps.filter(app => app.isPinnedToTaskbar).slice(0, 12),
     [apps],
   );
   const recommendedApps = useMemo(
-    () => apps.filter(app => !app.isPinned).slice(0, 6),
+    () => apps.filter(app => !app.isPinnedToTaskbar).slice(0, 6),
     [apps],
   );
   const sortedApps = useMemo(
@@ -160,7 +161,7 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
           <button
             title="Settings"
             onClick={() => {
-              const settingsApp = apps.find(app => app.appId === 'settings');
+              const settingsApp = apps.find(app => app.id === 'settings');
               if (settingsApp) onOpenApp(settingsApp);
               onClose();
             }}

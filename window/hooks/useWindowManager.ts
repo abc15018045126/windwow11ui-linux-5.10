@@ -7,6 +7,8 @@ import {
 } from '../constants';
 import {getAppDefinitions} from '../../components/apps';
 
+const PINNED_APPS_STORAGE_KEY = 'win11-clone-pinned-apps';
+
 export const useWindowManager = (
   desktopRef: React.RefObject<HTMLDivElement>,
 ) => {
@@ -17,6 +19,31 @@ export const useWindowManager = (
   const [nextZIndex, setNextZIndex] = useState<number>(10);
   const [appDefinitions, setAppDefinitions] = useState<AppDefinition[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
+  const [pinnedAppIDs, setPinnedAppIDs] = useState<string[]>([]);
+
+  // Load pinned apps from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const storedPinnedApps = localStorage.getItem(PINNED_APPS_STORAGE_KEY);
+      if (storedPinnedApps) {
+        setPinnedAppIDs(JSON.parse(storedPinnedApps));
+      }
+    } catch (error) {
+      console.error('Failed to load pinned apps from localStorage:', error);
+    }
+  }, []);
+
+  // Save pinned apps to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        PINNED_APPS_STORAGE_KEY,
+        JSON.stringify(pinnedAppIDs),
+      );
+    } catch (error) {
+      console.error('Failed to save pinned apps to localStorage:', error);
+    }
+  }, [pinnedAppIDs]);
 
   useEffect(() => {
     const loadApps = async () => {
@@ -26,6 +53,17 @@ export const useWindowManager = (
       setAppsLoading(false);
     };
     loadApps();
+  }, []);
+
+  const pinApp = useCallback((appId: string) => {
+    setPinnedAppIDs(prev => {
+      if (prev.includes(appId)) return prev;
+      return [...prev, appId];
+    });
+  }, []);
+
+  const unpinApp = useCallback((appId: string) => {
+    setPinnedAppIDs(prev => prev.filter(id => id !== appId));
   }, []);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
@@ -280,5 +318,8 @@ export const useWindowManager = (
     updateAppPosition,
     updateAppSize,
     updateAppTitle,
+    pinnedAppIDs,
+    pinApp,
+    unpinApp,
   };
 };

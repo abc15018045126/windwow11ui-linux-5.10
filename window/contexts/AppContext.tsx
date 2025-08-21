@@ -2,6 +2,10 @@ import React from 'react';
 
 // This definition represents the structure of the JSON data in our .app files,
 // which is discovered and served by the backend.
+import {AppDefinition} from '../types';
+
+// This definition represents the structure of the JSON data in our .app files,
+// which is discovered and served by the backend.
 export interface DiscoveredAppDefinition {
   id: string; // filename, e.g., "Notebook.app"
   name: string;
@@ -13,7 +17,7 @@ export interface DiscoveredAppDefinition {
 }
 
 export interface AppContextType {
-  apps: DiscoveredAppDefinition[];
+  apps: AppDefinition[];
 }
 
 // Provide a default value for the context
