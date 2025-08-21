@@ -48,14 +48,18 @@ const Taskbar: React.FC<TaskbarProps> = ({
   const handleAppIconClick = (app: TaskbarApp) => {
     if (app.isOpen && 'instanceId' in app) {
       const openAppInstance = app as OpenApp;
-      // If the app is open, focus or toggle minimize
       if (openAppInstance.isMinimized) {
+        // If it's minimized, restore and focus it.
+        toggleMinimizeApp(openAppInstance.instanceId);
+      } else if (app.isActive) {
+        // If it's the active window, minimize it.
         toggleMinimizeApp(openAppInstance.instanceId);
       } else {
+        // If it's open but not active, just focus it.
         focusApp(openAppInstance.instanceId);
       }
     } else {
-      // If the app is not open, open it
+      // If the app is not open, open it.
       openApp(app.id);
     }
   };
