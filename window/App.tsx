@@ -159,29 +159,12 @@ const App: React.FC = () => {
                 openApps={openApps}
                 activeAppInstanceId={activeAppInstanceId}
                 onToggleStartMenu={toggleStartMenu}
-                onAppIconClick={(appDef, instanceId) => {
-                  if (instanceId) {
-                    const app = openApps.find(a => a.instanceId === instanceId);
-                    if (app?.isMinimized) {
-                      // If the app is minimized, clicking its icon should restore and focus it.
-                      toggleMinimizeApp(instanceId); // This also focuses the app
-                    } else if (activeAppInstanceId !== instanceId) {
-                      // If the app is open but not active, clicking its icon should focus it.
-                      focusApp(instanceId);
-                    } else {
-                      // If the app is already active, clicking its icon should minimize it.
-                      toggleMinimizeApp(instanceId);
-                    }
-                  } else {
-                    // If the app is not open, clicking its icon should open it.
-                    openApp(appDef);
-                  }
-                }}
                 pinnedAppIDs={pinnedAppIDs}
                 pinApp={pinApp}
                 unpinApp={unpinApp}
                 closeApp={closeApp}
                 openApp={openApp}
+                focusApp={focusApp}
                 minimizeApp={toggleMinimizeApp}
                 maximizeApp={toggleMaximizeApp}
               />
