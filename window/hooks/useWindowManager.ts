@@ -98,6 +98,47 @@ export const useWindowManager = (
     };
   };
 
+  const focusApp = useCallback(
+    (instanceId: string) => {
+      if (activeAppInstanceId === instanceId) return;
+
+      const newZIndex = nextZIndex + 1;
+      setNextZIndex(newZIndex);
+      setOpenApps(prev =>
+        prev.map(app =>
+          app.instanceId === instanceId
+            ? {...app, zIndex: newZIndex, isMinimized: false}
+            : app,
+        ),
+      );
+      setActiveAppInstanceId(instanceId);
+    },
+    [activeAppInstanceId, nextZIndex],
+  );
+
+  const toggleMinimizeApp = useCallback(
+    (instanceId: string) => {
+      const app = openApps.find(a => a.instanceId === instanceId);
+      if (!app) return;
+
+      setOpenApps(prev =>
+        prev.map(a => {
+          if (a.instanceId === instanceId) {
+            return {...a, isMinimized: !a.isMinimized};
+          }
+          return a;
+        }),
+      );
+
+      if (app.isMinimized) {
+        focusApp(instanceId);
+      } else if (activeAppInstanceId === instanceId) {
+        setActiveAppInstanceId(null);
+      }
+    },
+    [openApps, activeAppInstanceId, focusApp],
+  );
+
   const openApp = useCallback(
     async (appIdentifier: string | AppDefinition, initialData?: any) => {
       let appDef: AppDefinition | undefined;
@@ -184,25 +225,7 @@ export const useWindowManager = (
       setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
       setActiveAppInstanceId(instanceId);
     },
-    [appDefinitions, nextZIndex],
-  );
-
-  const focusApp = useCallback(
-    (instanceId: string) => {
-      if (activeAppInstanceId === instanceId) return;
-
-      const newZIndex = nextZIndex + 1;
-      setNextZIndex(newZIndex);
-      setOpenApps(prev =>
-        prev.map(app =>
-          app.instanceId === instanceId
-            ? {...app, zIndex: newZIndex, isMinimized: false}
-            : app,
-        ),
-      );
-      setActiveAppInstanceId(instanceId);
-    },
-    [activeAppInstanceId, nextZIndex],
+    [appDefinitions, openApps, nextZIndex, focusApp, toggleMinimizeApp],
   );
 
   const closeApp = useCallback(
@@ -229,29 +252,6 @@ export const useWindowManager = (
       }
     },
     [openApps, activeAppInstanceId],
-  );
-
-  const toggleMinimizeApp = useCallback(
-    (instanceId: string) => {
-      const app = openApps.find(a => a.instanceId === instanceId);
-      if (!app) return;
-
-      setOpenApps(prev =>
-        prev.map(a => {
-          if (a.instanceId === instanceId) {
-            return {...a, isMinimized: !a.isMinimized};
-          }
-          return a;
-        }),
-      );
-
-      if (app.isMinimized) {
-        focusApp(instanceId);
-      } else if (activeAppInstanceId === instanceId) {
-        setActiveAppInstanceId(null);
-      }
-    },
-    [openApps, activeAppInstanceId, focusApp],
   );
 
   const toggleMaximizeApp = useCallback(

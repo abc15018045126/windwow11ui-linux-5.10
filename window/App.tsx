@@ -47,34 +47,8 @@ const App: React.FC = () => {
   const triggerRefresh = () => setRefreshId(id => id + 1);
 
   const toggleStartMenu = useCallback(
-    () => {
-      // This is a test implemented at the user's specific request to verify
-      // a hypothesis about state updates. This code is not intended to be
-      // a permanent solution.
-      const _closeAppCopy = (instanceId: string) => {
-        const appToClose = openApps.find(app => app.instanceId === instanceId);
-        if (!appToClose) return;
-
-        const updatedOpenApps = openApps.filter(
-          app => app.instanceId !== instanceId,
-        );
-        setOpenApps(updatedOpenApps);
-
-        if (activeAppInstanceId === instanceId) {
-          if (updatedOpenApps.length > 0) {
-            const nextActiveApp = updatedOpenApps.reduce((prev, current) =>
-              prev.zIndex > current.zIndex ? prev : current,
-            );
-            setActiveAppInstanceId(nextActiveApp.instanceId);
-          } else {
-            setActiveAppInstanceId(null);
-          }
-        }
-      };
-
-      setIsStartMenuOpen(prev => !prev)
-    },
-    [openApps, activeAppInstanceId],
+    () => setIsStartMenuOpen(prev => !prev),
+    [],
   );
 
   // --- Filesystem Operations ---
