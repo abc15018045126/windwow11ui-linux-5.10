@@ -76,6 +76,7 @@ const Taskbar: React.FC<TaskbarProps> = ({
     instance?: OpenApp,
   ) => {
     e.preventDefault();
+    e.stopPropagation();
     const menuItems: ContextMenuItem[] = [];
 
     if (instance) {
@@ -113,7 +114,11 @@ const Taskbar: React.FC<TaskbarProps> = ({
       });
     }
 
-    setContextMenu({x: e.clientX, y: e.clientY, items: menuItems});
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY - (menuItems.length * 30), // Adjust to open above cursor
+      items: menuItems
+    });
   };
 
   return (
@@ -151,7 +156,10 @@ const Taskbar: React.FC<TaskbarProps> = ({
             return (
               <button
                 key={appDef.id}
-                onClick={() => onAppIconClick(appDef, instance?.instanceId)}
+                onClick={e => {
+                  e.stopPropagation();
+                  onAppIconClick(appDef, instance?.instanceId);
+                }}
                 onContextMenu={e => handleContextMenu(e, appDef, instance)}
                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out
                             ${isActive ? theme.taskbar.activeButton : theme.taskbar.buttonHover}
