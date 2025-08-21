@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const {
     openApps,
     activeAppInstanceId,
-    appDefinitions: initialAppDefinitions,
+    appDefinitions,
     appsLoading,
     openApp,
     focusApp,
@@ -26,7 +26,6 @@ const App: React.FC = () => {
     updateAppTitle,
   } = useWindowManager(desktopRef);
 
-  const [appDefinitions, setAppDefinitions] = useState(initialAppDefinitions);
   const [isStartMenuOpen, setIsStartMenuOpen] = useState<boolean>(false);
   const [clipboard, setClipboard] = useState<ClipboardItem | null>(null);
 
@@ -74,18 +73,6 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
-    setAppDefinitions(initialAppDefinitions);
-  }, [initialAppDefinitions]);
-
-  const toggleAppPin = (appId: string) => {
-    setAppDefinitions(prevApps =>
-      prevApps.map(app =>
-        app.id === appId ? {...app, isPinned: !app.isPinned} : app,
-      ),
-    );
-  };
-
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isStartMenuOpen) {
         const target = event.target as HTMLElement;
@@ -102,7 +89,7 @@ const App: React.FC = () => {
   }, [isStartMenuOpen]);
 
   return (
-    <AppContext.Provider value={{apps: appDefinitions, toggleAppPin}}>
+    <AppContext.Provider value={{apps: appDefinitions}}>
       <ThemeContext.Provider value={{theme, setTheme: handleThemeChange}}>
         <div
           ref={desktopRef}
@@ -145,7 +132,9 @@ const App: React.FC = () => {
                       onResize={updateAppSize}
                       isActive={app.instanceId === activeAppInstanceId}
                       desktopRef={desktopRef}
-                      updateAppTitle={updateAppTitle}
+                      onSetTitle={newTitle =>
+                        updateAppTitle(app.instanceId, newTitle)
+                      }
                       onWallpaperChange={() => {}} // This is now handled by themes app
                       openApp={openApp}
                       clipboard={clipboard}
@@ -167,7 +156,7 @@ const App: React.FC = () => {
                 openApps={openApps}
                 activeAppInstanceId={activeAppInstanceId}
                 onToggleStartMenu={toggleStartMenu}
-                onAppIconClick={(appDef, instanceId) => {
+                onAppIconClick={(appId, instanceId) => {
                   if (instanceId) {
                     const app = openApps.find(a => a.instanceId === instanceId);
                     if (app?.isMinimized) {
@@ -178,13 +167,9 @@ const App: React.FC = () => {
                       toggleMinimizeApp(instanceId);
                     }
                   } else {
-                    openApp(appDef);
+                    openApp(appId);
                   }
                 }}
-                onCloseApp={closeApp}
-                onToggleMinimizeApp={toggleMinimizeApp}
-                onToggleMaximizeApp={toggleMaximizeApp}
-                onFocusApp={focusApp}
               />
             </>
           )}

@@ -15,7 +15,7 @@ interface AppWindowProps {
   onResize: (instanceId: string, size: {width: number; height: number}) => void;
   isActive: boolean;
   desktopRef: React.RefObject<HTMLDivElement>;
-  updateAppTitle: (instanceId: string, newTitle: string) => void;
+  onSetTitle: (newTitle: string) => void;
   onWallpaperChange: (newUrl: string) => void;
   openApp?: (appInfo: DiscoveredAppDefinition, initialData?: any) => void;
   clipboard?: ClipboardItem | null;
@@ -34,7 +34,7 @@ const AppWindow: React.FC<AppWindowProps> = ({
   onResize,
   isActive,
   desktopRef,
-  updateAppTitle,
+  onSetTitle,
   onWallpaperChange,
   openApp,
   clipboard,
@@ -187,13 +187,6 @@ const AppWindow: React.FC<AppWindowProps> = ({
 
   const AppComponent = app.component;
 
-  const setTitle = useCallback(
-    (newTitle: string) => {
-      updateAppTitle(app.instanceId, newTitle);
-    },
-    [updateAppTitle, app.instanceId],
-  );
-
   const windowClasses = `
     fixed flex flex-col shadow-2xl rounded-lg overflow-hidden
     border
@@ -300,7 +293,7 @@ const AppWindow: React.FC<AppWindowProps> = ({
         <AppComponent
           appInstanceId={app.instanceId}
           onClose={onClose}
-          setTitle={setTitle}
+          setTitle={newTitle => onSetTitle(newTitle)}
           wallpaper={app.id === 'themes' ? theme.wallpaper : undefined}
           onWallpaperChange={
             app.id === 'themes' ? onWallpaperChange : undefined

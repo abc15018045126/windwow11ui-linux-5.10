@@ -10,15 +10,11 @@ export interface DiscoveredAppDefinition {
   appId?: string;
   icon?: string;
   handlesFiles?: boolean;
-  isPinned?: boolean;
 }
 
 export interface AppContextType {
   apps: DiscoveredAppDefinition[];
-  toggleAppPin?: (appId: string) => void;
 }
 
 // Provide a default value for the context
-export const AppContext = React.createContext<AppContextType>({
-  apps: [],
-});
+export const AppContext = React.createContext<AppContextType>({apps: []});

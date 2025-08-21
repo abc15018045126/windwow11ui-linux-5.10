@@ -1,11 +1,10 @@
 import {ReactNode} from 'react';
 
 export interface IElectronAPI {
-  launchExternalApp: (appDef: AppDefinition, args?: string[]) => void;
-  onAppLaunched: (
-    callback: (appDef: AppDefinition & {pid: number}) => void,
-  ) => () => void;
-  onAppClosed: (callback: (pid: number) => void) => () => void;
+  // This is the only function left that is specific to the Electron environment.
+  // All other filesystem/API key operations are now handled via a web API
+  // to ensure consistency between the Electron app and a web browser client.
+  launchExternalApp: (path: string, args?: string[]) => Promise<boolean>;
   setProxyForSession: (
     partition: string,
     proxyConfig: {proxyRules: string},
@@ -69,7 +68,6 @@ export interface AppDefinition {
   isPinnedToTaskbar?: boolean; // To show on taskbar by default
   isExternal?: boolean; // To launch as a separate Electron process
   externalPath?: string; // Path relative to app root for the external app
-  isPinned?: boolean;
 }
 
 export interface OpenApp extends AppDefinition {
@@ -83,7 +81,6 @@ export interface OpenApp extends AppDefinition {
   previousPosition?: {x: number; y: number}; // For restoring from maximized
   previousSize?: {width: number; height: number}; // For restoring from maximized
   initialData?: any; // Data passed when the app is opened
-  pid?: number; // Process ID for external apps
 }
 
 export interface ChatMessage {

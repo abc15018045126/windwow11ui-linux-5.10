@@ -26,50 +26,7 @@ export const useWindowManager = (
       setAppsLoading(false);
     };
     loadApps();
-
-    const handleAppLaunched = (launchedAppDef: AppDefinition & {pid: number}) => {
-      const instanceId = `external-${launchedAppDef.pid}`;
-
-      const newApp: OpenApp = {
-        ...launchedAppDef,
-        instanceId,
-        pid: launchedAppDef.pid,
-        zIndex: 0,
-        position: getNextPosition(
-          launchedAppDef.defaultSize?.width || DEFAULT_WINDOW_WIDTH,
-          launchedAppDef.defaultSize?.height || DEFAULT_WINDOW_HEIGHT,
-        ),
-        size: {
-          width:
-            launchedAppDef.defaultSize?.width ||
-            DEFAULT_WINDOW_WIDTH,
-          height:
-            launchedAppDef.defaultSize?.height ||
-            DEFAULT_WINDOW_HEIGHT,
-        },
-        isMinimized: false,
-        isMaximized: false,
-        title: launchedAppDef.name,
-      };
-
-      setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
-      focusApp(instanceId);
-    };
-
-    const handleAppClosed = (pid: number) => {
-      setOpenApps(prev => prev.filter(app => app.pid !== pid));
-    };
-
-    const removeLaunchedListener =
-      window.electronAPI?.onAppLaunched(handleAppLaunched);
-    const removeClosedListener =
-      window.electronAPI?.onAppClosed(handleAppClosed);
-
-    return () => {
-      removeLaunchedListener?.();
-      removeClosedListener?.();
-    };
-  }, [focusApp]);
+  }, []);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
     const desktopWidth = desktopRef.current?.clientWidth || window.innerWidth;
@@ -115,28 +72,37 @@ export const useWindowManager = (
 
       if (appDef.isExternal && appDef.externalPath) {
         if (window.electronAPI?.launchExternalApp) {
-          window.electronAPI.launchExternalApp(appDef as AppDefinition);
+          window.electronAPI.launchExternalApp(appDef.externalPath);
+        } else {
+          fetch('http://localhost:3001/api/launch', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path: appDef.externalPath}),
+          }).catch(error => {
+            console.error('Failed to launch external app via API:', error);
+            alert(
+              'Failed to launch application. Ensure the backend server is running.',
+            );
+          });
         }
         return;
       }
 
-      // This is an internal app, so we can cast AppDefinition
-      const internalAppDef = appDef as AppDefinition;
-      if (!internalAppDef.id) {
+      if (!appDef.id) {
         console.error('Cannot open internal app without an ID.', appDef);
         return;
       }
 
       if (!initialData) {
         const existingAppInstance = openApps.find(
-          app => app.id === internalAppDef.id && !app.isMinimized,
+          app => app.id === appDef!.id && !app.isMinimized,
         );
         if (existingAppInstance) {
           focusApp(existingAppInstance.instanceId);
           return;
         }
         const minimizedInstance = openApps.find(
-          app => app.id === internalAppDef.id && app.isMinimized,
+          app => app.id === appDef!.id && app.isMinimized,
         );
         if (minimizedInstance) {
           toggleMinimizeApp(minimizedInstance.instanceId);
@@ -144,7 +110,7 @@ export const useWindowManager = (
         }
       }
 
-      const instanceId = `${internalAppDef.id}-${Date.now()}`;
+      const instanceId = `${appDef.id}-${Date.now()}`;
       const newZIndex = nextZIndex + 1;
       setNextZIndex(newZIndex);
 
@@ -152,22 +118,22 @@ export const useWindowManager = (
       const defaultHeight = appDef.defaultSize?.height || DEFAULT_WINDOW_HEIGHT;
 
       const newApp: OpenApp = {
-        ...internalAppDef,
-        icon: internalAppDef.icon,
+        ...appDef,
+        icon: appDef.icon,
         instanceId,
         zIndex: newZIndex,
         position: getNextPosition(defaultWidth, defaultHeight),
         size: {width: defaultWidth, height: defaultHeight},
         isMinimized: false,
         isMaximized: false,
-        title: internalAppDef.name,
+        title: appDef.name,
         initialData: initialData,
       };
 
       setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
       setActiveAppInstanceId(instanceId);
     },
-    [appDefinitions, nextZIndex, openApps, focusApp, toggleMinimizeApp],
+    [appDefinitions, nextZIndex],
   );
 
   const focusApp = useCallback(
@@ -270,7 +236,7 @@ export const useWindowManager = (
         }),
       );
     },
-    [nextZIndex, openApps],
+    [nextZIndex],
   );
 
   const updateAppPosition = useCallback(

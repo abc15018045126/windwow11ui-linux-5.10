@@ -1,0 +1,12 @@
+{
+  "name": "chrome7",
+  "version": "1.0.0",
+  "description": "A test Electron app.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^30.0.1"
+  }
+}

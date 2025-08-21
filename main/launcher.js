@@ -2,11 +2,15 @@ const path = require('path');
 const {spawn} = require('child_process');
 const {FS_ROOT} = require('./constants');
 
-function launchExternalAppByPath(webContents, appDef, args = []) {
+function launchExternalAppByPath(relativeAppPath, args = []) {
   try {
-    const appDir = path.join(FS_ROOT, appDef.externalPath);
+    const appDir = path.join(FS_ROOT, relativeAppPath);
     const appName = path.basename(appDir);
 
+    // This is the definitive, correct way to launch the child process.
+    // 1. We call the main Electron executable (`process.execPath`).
+    // 2. The first argument is the path to the application directory we want to launch.
+    // 3. We add `--launched-by-host` so the child process knows not to re-initialize servers.
     const spawnArgs = [appDir, '--launched-by-host', ...args];
 
     console.log(
@@ -16,49 +20,45 @@ function launchExternalAppByPath(webContents, appDef, args = []) {
     const child = spawn(process.execPath, spawnArgs, {
       detached: true,
       stdio: 'pipe',
+      // Provide the NODE_PATH to ensure the child can find the parent's `electron` module.
+      // This is critical for preventing "Cannot find module" errors.
       env: {
         ...process.env,
         NODE_PATH: path.resolve(FS_ROOT, 'node_modules'),
       },
     });
 
-    const pid = child.pid;
-    if (!pid) {
-      console.error(`[Launcher] Failed to get PID for ${appName}.`);
-      child.kill();
-      return;
-    }
-
-    console.log(`[Launcher] Launched ${appName} with PID: ${pid}`);
-    webContents.send('app-launched', {...appDef, pid});
-
     child.stdout.on('data', data => {
-      console.log(`[${appName}] [pid:${pid}] stdout: ${data}`);
+      console.log(`[${appName}] stdout: ${data}`);
     });
 
     child.stderr.on('data', data => {
-      console.error(`[${appName}] [pid:${pid}] stderr: ${data}`);
+      console.error(`[${appName}] stderr: ${data}`);
     });
 
     child.on('error', err => {
       console.error(
-        `[Launcher] Failed to start subprocess for ${appName} [pid:${pid}]. Error: ${err.message}`,
+        `[Launcher] Failed to start subprocess for ${appName}. Error: ${err.message}`,
       );
     });
 
     child.on('exit', (code, signal) => {
-      console.log(
-        `[Launcher] Subprocess for ${appName} [pid:${pid}] exited with code ${code}, signal ${signal}`,
-      );
-      webContents.send('app-closed', pid);
+      if (code !== 0) {
+        console.error(
+          `[Launcher] Subprocess for ${appName} exited with code ${code} and signal ${signal}`,
+        );
+      }
     });
 
     child.unref();
+
+    return true;
   } catch (error) {
     console.error(
-      `Error launching external app for path ${appDef.externalPath}:`,
+      `Error launching external app for path ${relativeAppPath}:`,
       error,
     );
+    return false;
   }
 }
 
