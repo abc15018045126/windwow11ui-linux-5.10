@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const {
     openApps,
     activeAppInstanceId,
-    appDefinitions,
+    appDefinitions: initialAppDefinitions,
     appsLoading,
     openApp,
     focusApp,
@@ -26,6 +26,7 @@ const App: React.FC = () => {
     updateAppTitle,
   } = useWindowManager(desktopRef);
 
+  const [appDefinitions, setAppDefinitions] = useState(initialAppDefinitions);
   const [isStartMenuOpen, setIsStartMenuOpen] = useState<boolean>(false);
   const [clipboard, setClipboard] = useState<ClipboardItem | null>(null);
 
@@ -73,6 +74,20 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
+    setAppDefinitions(initialAppDefinitions);
+  }, [initialAppDefinitions]);
+
+  const toggleAppPin = (appId: string) => {
+    console.log(`Toggling pin for ${appId}`);
+    // This is a mock implementation. A real one would persist this setting.
+    setAppDefinitions(prevApps =>
+      prevApps.map(app =>
+        app.id === appId ? {...app, isPinned: !app.isPinned} : app,
+      ),
+    );
+  };
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isStartMenuOpen) {
         const target = event.target as HTMLElement;
@@ -89,7 +104,7 @@ const App: React.FC = () => {
   }, [isStartMenuOpen]);
 
   return (
-    <AppContext.Provider value={{apps: appDefinitions}}>
+    <AppContext.Provider value={{apps: appDefinitions, toggleAppPin}}>
       <ThemeContext.Provider value={{theme, setTheme: handleThemeChange}}>
         <div
           ref={desktopRef}
@@ -154,7 +169,7 @@ const App: React.FC = () => {
                 openApps={openApps}
                 activeAppInstanceId={activeAppInstanceId}
                 onToggleStartMenu={toggleStartMenu}
-                onAppIconClick={(appId, instanceId) => {
+                onAppIconClick={(appDef, instanceId) => {
                   if (instanceId) {
                     const app = openApps.find(a => a.instanceId === instanceId);
                     if (app?.isMinimized) {
@@ -165,9 +180,13 @@ const App: React.FC = () => {
                       toggleMinimizeApp(instanceId);
                     }
                   } else {
-                    openApp(appId);
+                    openApp(appDef);
                   }
                 }}
+                onCloseApp={closeApp}
+                onToggleMinimizeApp={toggleMinimizeApp}
+                onToggleMaximizeApp={toggleMaximizeApp}
+                onFocusApp={focusApp}
               />
             </>
           )}

@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
-import {AppComponentProps, AppDefinition} from '../../window/types';
+import {AppComponentProps, AppDefinition} from '../../types';
 import {HyperIcon as TerminusIcon} from '../../constants';
 import {Terminal} from 'xterm';
 import {FitAddon} from 'xterm-addon-fit';
