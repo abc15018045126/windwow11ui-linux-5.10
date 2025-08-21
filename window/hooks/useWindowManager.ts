@@ -5,7 +5,7 @@ import {
   DEFAULT_WINDOW_WIDTH,
   DEFAULT_WINDOW_HEIGHT,
 } from '../constants';
-import {getAppDefinitions} from '../components/apps';
+import {getAppDefinitions} from '../../components/apps';
 
 export const useWindowManager = (
   desktopRef: React.RefObject<HTMLDivElement>,
@@ -28,15 +28,17 @@ export const useWindowManager = (
     loadApps();
 
     const handleAppLaunched = (launchedAppDef: AppDefinition & {pid: number}) => {
-      console.log('App launched event received in renderer:', launchedAppDef);
       const instanceId = `external-${launchedAppDef.pid}`;
 
       const newApp: OpenApp = {
         ...launchedAppDef,
         instanceId,
         pid: launchedAppDef.pid,
-        zIndex: 0, // Will be managed by focusApp
-        position: {x: 50, y: 50}, // Placeholder position
+        zIndex: 0,
+        position: getNextPosition(
+          launchedAppDef.defaultSize?.width || DEFAULT_WINDOW_WIDTH,
+          launchedAppDef.defaultSize?.height || DEFAULT_WINDOW_HEIGHT,
+        ),
         size: {
           width:
             launchedAppDef.defaultSize?.width ||
@@ -55,7 +57,6 @@ export const useWindowManager = (
     };
 
     const handleAppClosed = (pid: number) => {
-      console.log('App closed event received in renderer for pid:', pid);
       setOpenApps(prev => prev.filter(app => app.pid !== pid));
     };
 
@@ -90,11 +91,8 @@ export const useWindowManager = (
   };
 
   const openApp = useCallback(
-    async (
-      appIdentifier: string | AppDefinition | DiscoveredAppDefinition,
-      initialData?: any,
-    ) => {
-      let appDef: (AppDefinition | DiscoveredAppDefinition) | undefined;
+    async (appIdentifier: string | AppDefinition, initialData?: any) => {
+      let appDef: AppDefinition | undefined;
 
       if (typeof appIdentifier === 'string') {
         appDef = appDefinitions.find(app => app.id === appIdentifier);
@@ -117,32 +115,28 @@ export const useWindowManager = (
 
       if (appDef.isExternal && appDef.externalPath) {
         if (window.electronAPI?.launchExternalApp) {
-          // The app is now launched, and the 'app-launched' event will handle adding it to the state
           window.electronAPI.launchExternalApp(appDef as AppDefinition);
-        } else {
-          // Fallback for non-electron environment (e.g. web browser)
-          console.warn(
-            'Electron API not available. Using fallback for external app launch.',
-          );
         }
         return;
       }
 
-      if (!appDef.id) {
+      // This is an internal app, so we can cast AppDefinition
+      const internalAppDef = appDef as AppDefinition;
+      if (!internalAppDef.id) {
         console.error('Cannot open internal app without an ID.', appDef);
         return;
       }
 
       if (!initialData) {
         const existingAppInstance = openApps.find(
-          app => app.id === appDef!.id && !app.isMinimized,
+          app => app.id === internalAppDef.id && !app.isMinimized,
         );
         if (existingAppInstance) {
           focusApp(existingAppInstance.instanceId);
           return;
         }
         const minimizedInstance = openApps.find(
-          app => app.id === appDef!.id && app.isMinimized,
+          app => app.id === internalAppDef.id && app.isMinimized,
         );
         if (minimizedInstance) {
           toggleMinimizeApp(minimizedInstance.instanceId);
@@ -150,8 +144,6 @@ export const useWindowManager = (
         }
       }
 
-      // This is an internal app, so we can cast AppDefinition
-      const internalAppDef = appDef as AppDefinition;
       const instanceId = `${internalAppDef.id}-${Date.now()}`;
       const newZIndex = nextZIndex + 1;
       setNextZIndex(newZIndex);

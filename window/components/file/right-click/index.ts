@@ -1,5 +1,5 @@
 import {FilesystemItem} from '../../../types';
-import {ContextMenuItem} from '../../ContextMenu';
+import {ContextMenuItem} from '../ContextMenu';
 import {DiscoveredAppDefinition} from '../../../contexts/AppContext';
 import {handleNewFolder, handleNewFile} from './create';
 import {handleDeleteItem} from './delete';

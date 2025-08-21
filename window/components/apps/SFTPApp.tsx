@@ -3,9 +3,9 @@ import {
   AppComponentProps,
   AppDefinition,
   FilesystemItem as BaseFilesystemItem,
-} from '../../types';
+} from '../../window/types';
 import {FolderIcon, FileGenericIcon, SftpIcon} from '../../constants';
-import ContextMenu, {ContextMenuItem} from '../ContextMenu';
+import ContextMenu, {ContextMenuItem} from '../../components/ContextMenu';
 
 const pathHelper = {
   join: (...args: string[]) => args.join('/').replace(/\/+/g, '/'),
@@ -21,12 +21,8 @@ const pathHelper = {
 };
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-// Make the properties non-optional for this component's logic
 interface FilesystemItem extends BaseFilesystemItem {
   size?: number;
-  name: string;
-  path: string;
-  type: 'file' | 'folder';
 }
 
 const getFileIcon = (filename: string) => {

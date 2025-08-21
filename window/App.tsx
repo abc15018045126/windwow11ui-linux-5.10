@@ -78,8 +78,6 @@ const App: React.FC = () => {
   }, [initialAppDefinitions]);
 
   const toggleAppPin = (appId: string) => {
-    console.log(`Toggling pin for ${appId}`);
-    // This is a mock implementation. A real one would persist this setting.
     setAppDefinitions(prevApps =>
       prevApps.map(app =>
         app.id === appId ? {...app, isPinned: !app.isPinned} : app,

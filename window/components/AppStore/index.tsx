@@ -1,25 +1,9 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import {AppComponentProps, AppDefinition} from '../../types';
-import Icon from '../icon'; // Corrected path
-// Assuming RefreshIcon and HyperIcon are decorative and can be replaced or defined
-const RefreshIcon = ({className}: {className: string}) => (
-  <svg
-    className={className}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M4 4v5h5M20 20v-5h-5M4 4l16 16"
-    />
-  </svg>
-);
-const HyperIcon = ({className}: {className: string}) => (
-  <div className={className}>⚛️</div>
-);
+import React, {useState, useEffect, useCallback} from 'react';
+import {AppComponentProps} from '../../../types';
+import {RefreshIcon, HyperIcon} from '../../../constants';
+import Icon from './icon';
+
 const AppStoreApp: React.FC<AppComponentProps> = ({setTitle}) => {
   const [availableApps, setAvailableApps] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -128,6 +112,13 @@ const AppStoreApp: React.FC<AppComponentProps> = ({setTitle}) => {
   );
 };
 
-// The 'appDefinition' should be in its own App.tsx file, not here.
-// This component only defines the view.
+export const appDefinition: AppDefinition = {
+  id: 'appStore',
+  name: 'App Store',
+  icon: 'appStore',
+  component: AppStoreApp,
+  defaultSize: {width: 750, height: 550},
+  isPinnedToTaskbar: true,
+};
+
 export default AppStoreApp;
