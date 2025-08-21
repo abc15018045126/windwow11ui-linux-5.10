@@ -68,7 +68,7 @@ export const useWindowManager = (
       removeLaunchedListener?.();
       removeClosedListener?.();
     };
-  }, []);
+  }, [focusApp]);
 
   const getNextPosition = (appWidth: number, appHeight: number) => {
     const desktopWidth = desktopRef.current?.clientWidth || window.innerWidth;
@@ -150,7 +150,9 @@ export const useWindowManager = (
         }
       }
 
-      const instanceId = `${appDef.id}-${Date.now()}`;
+      // This is an internal app, so we can cast AppDefinition
+      const internalAppDef = appDef as AppDefinition;
+      const instanceId = `${internalAppDef.id}-${Date.now()}`;
       const newZIndex = nextZIndex + 1;
       setNextZIndex(newZIndex);
 
@@ -158,22 +160,22 @@ export const useWindowManager = (
       const defaultHeight = appDef.defaultSize?.height || DEFAULT_WINDOW_HEIGHT;
 
       const newApp: OpenApp = {
-        ...appDef,
-        icon: appDef.icon,
+        ...internalAppDef,
+        icon: internalAppDef.icon,
         instanceId,
         zIndex: newZIndex,
         position: getNextPosition(defaultWidth, defaultHeight),
         size: {width: defaultWidth, height: defaultHeight},
         isMinimized: false,
         isMaximized: false,
-        title: appDef.name,
+        title: internalAppDef.name,
         initialData: initialData,
       };
 
       setOpenApps(currentOpenApps => [...currentOpenApps, newApp]);
       setActiveAppInstanceId(instanceId);
     },
-    [appDefinitions, nextZIndex, openApps],
+    [appDefinitions, nextZIndex, openApps, focusApp, toggleMinimizeApp],
   );
 
   const focusApp = useCallback(
