@@ -41,11 +41,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose, isSubMenu]);
 
-  const handleItemClick = async (onClick: () => void) => {
-    // Close the menu immediately to prevent UI lag or race conditions
-    onClose();
-    // Await the action to ensure it completes, even if it's async
-    await onClick();
+  const handleItemClick = (onClick: () => void) => {
+    // The responsibility of closing the menu is now on the caller,
+    // which defines the onClick handler. This prevents race conditions.
+    onClick();
   };
 
   const handleSubMenuEnter = (index: number) => {
@@ -126,7 +125,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         return (
           <button
             key={index}
-            onClick={() => item.onClick && handleItemClick(item.onClick)}
+            onClick={() => handleItemClick(item.onClick)}
             disabled={item.disabled}
             className="w-full text-left px-3 py-1.5 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm flex items-center"
           >
