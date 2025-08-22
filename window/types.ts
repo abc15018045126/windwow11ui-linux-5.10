@@ -10,6 +10,7 @@ export interface IElectronAPI {
     proxyConfig: {proxyRules: string},
   ) => Promise<void>;
   clearProxyForSession: (partition: string) => Promise<void>;
+  restartApp: () => void;
 }
 
 declare global {
