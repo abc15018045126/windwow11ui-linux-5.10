@@ -193,7 +193,7 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
           const fileContent = await FsService.readFile(item.path);
           if (fileContent?.content) {
             const appInfo = JSON.parse(fileContent.content);
-            openApp?.(appInfo.appId);
+            openApp?.(appInfo);
           }
         } catch (e) {
           console.error('Could not parse or open app shortcut', e);

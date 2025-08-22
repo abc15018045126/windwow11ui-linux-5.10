@@ -66,17 +66,31 @@ export const useWindowManager = (
 
   const openApp = useCallback(
     async (appIdentifier: string | AppDefinition, initialData?: any) => {
-      let appDef: AppDefinition | undefined;
+      let baseAppDef: AppDefinition | undefined;
+      let appOverrides: Partial<AppDefinition> = {};
 
       if (typeof appIdentifier === 'string') {
-        appDef = appDefinitions.find(app => app.id === appIdentifier);
+        baseAppDef = appDefinitions.find(app => app.id === appIdentifier);
       } else {
-        const potentialAppDef = appIdentifier as any;
-        if (potentialAppDef.path && !potentialAppDef.externalPath) {
-          potentialAppDef.externalPath = potentialAppDef.path;
+        // It's an object, likely from a .app file. It must have an appId property.
+        const appInfo = appIdentifier as any;
+        if (appInfo.appId) {
+          baseAppDef = appDefinitions.find(app => app.id === appInfo.appId);
+          appOverrides = appInfo;
         }
-        appDef = potentialAppDef;
       }
+
+      if (!baseAppDef) {
+        const id =
+          typeof appIdentifier === 'string'
+            ? appIdentifier
+            : JSON.stringify(appIdentifier);
+        console.error(`App with identifier "${id}" not found or invalid.`);
+        return;
+      }
+
+      // Merge the base definition with any overrides from the .app file
+      const appDef: AppDefinition = {...baseAppDef, ...appOverrides};
 
       if (!appDef) {
         const id =
