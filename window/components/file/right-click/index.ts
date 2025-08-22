@@ -1,6 +1,6 @@
 import {AppDefinition, FilesystemItem} from '../../../types';
 import {ContextMenuItem} from '../ContextMenu';
-import {getAppsForExtension} from '../../../services/fileAssociationService';
+import {getAppsForExtension} from '../../../../services/fileAssociationService';
 
 import {handleNewFolder, handleNewFile} from './create';
 import {handleDeleteItem} from './delete';
