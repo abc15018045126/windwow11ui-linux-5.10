@@ -3,7 +3,7 @@ import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
-import {createFile} from '../../services/filesystemService';
+import {handleCreateShortcut} from './start-menu/right-click/actions';
 import {AppDefinition} from '../types';
 
 interface StartMenuProps {
@@ -35,26 +35,6 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
     [apps],
   );
 
-  const handleCreateShortcut = async (app: AppDefinition) => {
-    const shortcutContent = {
-      name: app.name,
-      appId: app.id,
-      icon: app.icon,
-    };
-    const fileName = `${app.name}.app`;
-    try {
-      await createFile(
-        '/Desktop',
-        fileName,
-        JSON.stringify(shortcutContent, null, 2),
-      );
-      // Optional: show success notification
-    } catch (error) {
-      console.error('Failed to create shortcut', error);
-      // Optional: show error notification
-    }
-  };
-
   const handleContextMenu = (e: React.MouseEvent, app: AppDefinition) => {
     e.preventDefault();
     setContextMenu({x: e.clientX, y: e.clientY, app});
@@ -65,18 +45,12 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
         {
           type: 'item',
           label: 'Open',
-          onClick: () => {
-            onOpenApp(contextMenu.app);
-            setContextMenu(null);
-          },
+          onClick: () => onOpenApp(contextMenu.app),
         },
         {
           type: 'item',
           label: 'Create shortcut',
-          onClick: async () => {
-            await handleCreateShortcut(contextMenu.app);
-            setContextMenu(null);
-          },
+          onClick: () => handleCreateShortcut(contextMenu.app),
         },
       ]
     : [];
