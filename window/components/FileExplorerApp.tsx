@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useCallback,
   useContext,
+  useRef,
 } from 'react';
 import {
   AppDefinition,
@@ -72,13 +73,38 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
   } | null>(null);
   const [renamingItemPath, setRenamingItemPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [itemToSelect, setItemToSelect] = useState<string | null>(null);
+  const itemRefs = useRef<{[key: string]: HTMLButtonElement | null}>({});
 
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
+    itemRefs.current = {}; // Clear refs on each fetch
     const items = await FsService.listDirectory(currentPath);
     setItemsInCurrentPath(items);
     setIsLoading(false);
   }, [currentPath]);
+
+  // Effect to handle selecting an item when the component loads or data changes
+  useEffect(() => {
+    if (initialData?.selectItem) {
+      setItemToSelect(initialData.selectItem);
+    }
+  }, [initialData]);
+
+  // Effect to scroll to and highlight the selected item
+  useEffect(() => {
+    if (itemToSelect && itemRefs.current[itemToSelect]) {
+      const element = itemRefs.current[itemToSelect];
+      element?.scrollIntoView({behavior: 'smooth', block: 'center'});
+
+      // Temporarily highlight and then remove the highlight
+      const timer = setTimeout(() => {
+        setItemToSelect(null);
+      }, 2000); // Highlight for 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [itemToSelect, itemsInCurrentPath]); // Rerun if items change
 
   useEffect(() => {
     const pathName =
@@ -148,7 +174,6 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
             if (shortcutInfo.type === 'folder') {
               navigateTo(shortcutInfo.target);
             } else {
-              // This is the logic for opening a file from the 'else' block below
               const extension =
                 '.' + (shortcutInfo.target.split('.').pop() || '').toLowerCase();
               const associatedApps = await getAppsForExtension(extension);
@@ -174,7 +199,6 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
           console.error('Could not parse or open app shortcut', e);
         }
       } else {
-        // Handle other files using the association service
         const extension =
           '.' + (item.name.split('.').pop() || '').toLowerCase();
         const associatedApps = await getAppsForExtension(extension);
@@ -238,7 +262,6 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
         isPasteDisabled: !clipboard,
       });
 
-      // Add file explorer specific items for background menu
       if (!contextMenu.item) {
         items.push({type: 'separator'});
         items.push({type: 'item', label: 'Refresh', onClick: fetchItems});
@@ -373,9 +396,12 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
               {itemsInCurrentPath.map(item => (
                 <button
                   key={item.path}
+                  ref={el => (itemRefs.current[item.name] = el)}
                   onDoubleClick={() => openItem(item)}
                   onContextMenu={e => handleItemContextMenu(e, item)}
-                  className="flex flex-col items-center p-2 rounded hover:bg-white/10 transition-colors text-center aspect-square relative focus:outline-none focus:bg-blue-500/30"
+                  className={`flex flex-col items-center p-2 rounded hover:bg-white/10 transition-colors text-center aspect-square relative focus:outline-none focus:bg-blue-500/30 ${
+                    item.name === itemToSelect ? 'bg-blue-600/40' : ''
+                  }`}
                 >
                   <Icon
                     iconName={

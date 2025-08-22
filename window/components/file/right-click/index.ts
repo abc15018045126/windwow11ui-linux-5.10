@@ -5,6 +5,7 @@ import {handleNewFolder, handleNewFile} from './create';
 import {handleDeleteItem} from './delete';
 import {handleShowProperties} from './properties';
 import {handleCreateShortcut} from './shortcut';
+import {handleOpenFileLocation} from './location';
 
 type OpenAppFunction = (
   appIdentifier: string | DiscoveredAppDefinition,
@@ -50,6 +51,11 @@ export const buildContextMenu = (
       type: 'item',
       label: 'Open',
       onClick: () => onOpen(clickedItem),
+    });
+    menuItems.push({
+      type: 'item',
+      label: 'Open file location',
+      onClick: () => handleOpenFileLocation(clickedItem, openApp),
     });
     // TODO: Add 'Open With' logic here later
     menuItems.push({type: 'separator'});
