@@ -13,12 +13,7 @@ function hasAppDefinition(
   );
 }
 
-export const getAppDefinitions = async (
-  forceRefresh = false,
-): Promise<AppDefinition[]> => {
-  if (appDefinitions && !forceRefresh) {
-    return appDefinitions;
-  }
+export const getAppDefinitions = async (): Promise<AppDefinition[]> => {
 
   // Use import.meta.glob to dynamically find all App.tsx files for internal apps
   const internalAppModules = import.meta.glob([

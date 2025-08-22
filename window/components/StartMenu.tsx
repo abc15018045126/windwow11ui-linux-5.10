@@ -65,10 +65,7 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
         {
           type: 'item',
           label: 'Open',
-          onClick: () => {
-            onOpenApp(contextMenu.app);
-            onClose();
-          },
+          onClick: () => onOpenApp(contextMenu.app),
         },
         {
           type: 'item',
