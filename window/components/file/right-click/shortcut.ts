@@ -1,10 +1,20 @@
 import {FilesystemItem} from '../../../types';
+import {createLink} from '../../../../services/filesystemService';
 
-export const handleCreateShortcut = (
+export const handleCreateShortcut = async (
   item: FilesystemItem,
   refresh: () => void,
 ) => {
-  // This is a placeholder. A full implementation would require creating a new .app file
-  // on the desktop that points to the original item's path.
-  alert('Create Shortcut feature is not yet implemented.');
+  try {
+    const success = await createLink(item.path);
+    if (success) {
+      refresh();
+    } else {
+      // TODO: Show a proper error to the user via a modal or toast notification
+      alert('Failed to create shortcut.');
+    }
+  } catch (error) {
+    console.error('Failed to create shortcut:', error);
+    alert('An error occurred while creating the shortcut.');
+  }
 };

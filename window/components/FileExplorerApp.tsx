@@ -136,7 +136,34 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
       }
 
       // Handle files
-      if (item.name.endsWith('.app')) {
+      if (item.name.endsWith('.lnk')) {
+        try {
+          const fileContent = await FsService.readFile(item.path);
+          if (fileContent?.content) {
+            const shortcutInfo = JSON.parse(fileContent.content);
+            if (!shortcutInfo.target || !shortcutInfo.type) {
+              throw new Error('Invalid shortcut file format.');
+            }
+
+            if (shortcutInfo.type === 'folder') {
+              navigateTo(shortcutInfo.target);
+            } else {
+              // This is the logic for opening a file from the 'else' block below
+              const extension =
+                '.' + (shortcutInfo.target.split('.').pop() || '').toLowerCase();
+              const associatedApps = await getAppsForExtension(extension);
+              const targetAppId =
+                associatedApps.length > 0
+                  ? associatedApps[0].id
+                  : 'notebook';
+              openApp?.(targetAppId, {filePath: shortcutInfo.target});
+            }
+          }
+        } catch (e) {
+          console.error('Could not open shortcut', e);
+          alert('Could not open shortcut. It may be broken.');
+        }
+      } else if (item.name.endsWith('.app')) {
         try {
           const fileContent = await FsService.readFile(item.path);
           if (fileContent?.content) {
