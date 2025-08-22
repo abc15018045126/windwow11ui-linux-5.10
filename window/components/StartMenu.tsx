@@ -65,12 +65,18 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
         {
           type: 'item',
           label: 'Open',
-          onClick: () => onOpenApp(contextMenu.app),
+          onClick: () => {
+            onOpenApp(contextMenu.app);
+            setContextMenu(null);
+          },
         },
         {
           type: 'item',
           label: 'Create shortcut',
-          onClick: () => handleCreateShortcut(contextMenu.app),
+          onClick: async () => {
+            await handleCreateShortcut(contextMenu.app);
+            setContextMenu(null);
+          },
         },
       ]
     : [];
