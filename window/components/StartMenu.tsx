@@ -3,23 +3,33 @@ import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
-import {buildStartMenuContextMenu} from './start-menu/right-click/actions';
-import {AppDefinition} from '../types';
+import {buildContextMenu} from './file/right-click';
+import * as FsService from '../../services/filesystemService';
+import {AppDefinition, FilesystemItem} from '../types';
 
 interface StartMenuProps {
   onOpenApp: (app: AppDefinition) => void;
   onClose: () => void;
+  onCopy: (item: FilesystemItem) => void;
+  onCut: (item: FilesystemItem) => void;
+  onPaste: (path: string) => void;
 }
 
-const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
-  const {apps} = useContext(AppContext);
+const StartMenu: React.FC<StartMenuProps> = ({
+  onOpenApp,
+  onClose,
+  onCopy,
+  onCut,
+  onPaste,
+}) => {
+  const {apps, refreshApps} = useContext(AppContext);
   const [isShowingAllApps, setIsShowingAllApps] = useState(false);
   const {theme} = useTheme();
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    app: AppDefinition;
+    items: ContextMenuItem[];
   } | null>(null);
 
   const pinnedApps = useMemo(
@@ -35,18 +45,67 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
     [apps],
   );
 
-  const handleContextMenu = (e: React.MouseEvent, app: AppDefinition) => {
+  const handleContextMenu = async (
+    e: React.MouseEvent,
+    app: AppDefinition,
+  ) => {
     e.preventDefault();
-    setContextMenu({x: e.clientX, y: e.clientY, app});
-  };
 
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!contextMenu) return [];
-    return buildStartMenuContextMenu({
-      app: contextMenu.app,
-      onOpenApp: onOpenApp,
-    });
-  }, [contextMenu, onOpenApp]);
+    const allAppsPath = '/All Apps';
+    const appFileName = `${app.name}.app`;
+    const appFilePath = `${allAppsPath}/${appFileName}`;
+
+    try {
+      // 1. Ensure /All Apps folder exists
+      const rootItems = await FsService.listDirectory('/');
+      const allAppsFolderExists = rootItems.some(
+        item => item.name === 'All Apps' && item.type === 'folder',
+      );
+      if (!allAppsFolderExists) {
+        await FsService.createFolder('/', 'All Apps');
+      }
+
+      // 2. Ensure the .app file exists inside /All Apps
+      const allAppsItems = await FsService.listDirectory(allAppsPath);
+      let appFileItem = allAppsItems.find(item => item.name === appFileName);
+
+      if (!appFileItem) {
+        const appFileContent = JSON.stringify({appId: app.id, icon: app.icon});
+        await FsService.createFile(allAppsPath, appFileName, appFileContent);
+        // Manually construct the item as it wasn't in the list before
+        appFileItem = {
+          name: appFileName,
+          path: appFilePath,
+          type: 'file',
+          content: appFileContent,
+        };
+      }
+
+      // 3. Now build the full context menu using the file-based builder
+      const menuItems = await buildContextMenu({
+        clickedItem: appFileItem,
+        currentPath: allAppsPath,
+        refresh: refreshApps, // Refresh the app list if an item is deleted/renamed
+        openApp: (appIdOrDef, data) => {
+          const appDef =
+            typeof appIdOrDef === 'string'
+              ? apps.find(a => a.id === appIdOrDef)
+              : appIdOrDef;
+          if (appDef) onOpenApp(appDef);
+        },
+        onRename: () => alert('Rename not supported from Start Menu.'), // Placeholder
+        onCopy: onCopy,
+        onCut: onCut,
+        onPaste: onPaste,
+        onOpen: item => onOpenApp(app), // Open the abstract app, not the file
+        isPasteDisabled: true, // Pasting in this context doesn't make sense
+      });
+
+      setContextMenu({x: e.clientX, y: e.clientY, items: menuItems});
+    } catch (error) {
+      console.error(`Error building context menu for ${app.name}:`, error);
+    }
+  };
 
   return (
     <>
@@ -211,7 +270,7 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          items={contextMenuItems}
+          items={contextMenu.items}
           onClose={() => setContextMenu(null)}
         />
       )}
