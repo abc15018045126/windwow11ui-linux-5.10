@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useContext, useRef} from 'react';
+import React, {useState, useMemo, useContext, useRef, useEffect} from 'react';
 import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
