@@ -19,7 +19,6 @@ function launchExternalAppByPath(relativeAppPath, args = []) {
     );
 
     const child = spawn(process.execPath, spawnArgs, {
-      detached: true,
       stdio: 'pipe',
       // Provide the NODE_PATH to ensure the child can find the parent's `electron` module.
       // This is critical for preventing "Cannot find module" errors.
@@ -53,7 +52,6 @@ function launchExternalAppByPath(relativeAppPath, args = []) {
     });
 
     add(child); // Add to tracking
-    child.unref();
 
     return true;
   } catch (error) {
