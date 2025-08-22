@@ -218,4 +218,47 @@ router.post('/copy', async (req, res) => {
   }
 });
 
+router.post('/create-link', async (req, res) => {
+  try {
+    const {targetPath} = req.body;
+    if (!targetPath) {
+      return res.status(400).json({error: 'targetPath is required'});
+    }
+
+    const absoluteTargetPath = resolvePath(targetPath);
+    const stats = await fs.promises.stat(absoluteTargetPath);
+
+    const targetDir = path.dirname(targetPath);
+    const targetName = path.basename(targetPath);
+
+    // Ensure the shortcut name is unique
+    let counter = 0;
+    let shortcutName = `${targetName} - Shortcut.lnk`;
+    let absoluteShortcutPath = resolvePath(path.join(targetDir, shortcutName));
+
+    // A loop to find a unique name if the default already exists.
+    // For "file.txt", this will correctly become "file.txt - Shortcut (1).lnk"
+    while (fs.existsSync(absoluteShortcutPath)) {
+      counter++;
+      shortcutName = `${targetName} - Shortcut (${counter}).lnk`;
+      absoluteShortcutPath = resolvePath(path.join(targetDir, shortcutName));
+    }
+
+    const shortcutContent = JSON.stringify({
+      target: targetPath,
+      type: stats.isDirectory() ? 'folder' : 'file',
+    });
+
+    await fs.promises.writeFile(absoluteShortcutPath, shortcutContent, 'utf-8');
+    res.json({success: true, path: path.join(targetDir, shortcutName)});
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.status(404).json({error: 'Target file or folder not found.'});
+    } else {
+      console.error('API Error creating link:', error);
+      res.status(500).json({error: 'Failed to create link'});
+    }
+  }
+});
+
 module.exports = router;

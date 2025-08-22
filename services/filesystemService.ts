@@ -90,6 +90,21 @@ export const saveFile = async (
   }
 };
 
+export const createLink = async (targetPath: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/create-link`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({targetPath}),
+    });
+    const result = await handleResponse<{success: boolean}>(response);
+    return result?.success || false;
+  } catch (e) {
+    console.error('Network error in createLink:', e);
+    return false;
+  }
+};
+
 const APP_DATA_API_BASE_URL = 'http://localhost:3001/api';
 
 export const fetchPinnedApps = async (): Promise<string[]> => {
