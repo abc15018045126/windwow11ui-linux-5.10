@@ -229,18 +229,17 @@ router.post('/create-link', async (req, res) => {
     const stats = await fs.promises.stat(absoluteTargetPath);
 
     const targetDir = path.dirname(targetPath);
-    const targetName = path.basename(targetPath);
+    const targetBaseName = path.parse(targetPath).name; // "file" from "file.txt"
 
     // Ensure the shortcut name is unique
     let counter = 0;
-    let shortcutName = `${targetName} - Shortcut.lnk`;
+    let shortcutName = `${targetBaseName} - Shortcut.lnk`;
     let absoluteShortcutPath = resolvePath(path.join(targetDir, shortcutName));
 
     // A loop to find a unique name if the default already exists.
-    // For "file.txt", this will correctly become "file.txt - Shortcut (1).lnk"
     while (fs.existsSync(absoluteShortcutPath)) {
       counter++;
-      shortcutName = `${targetName} - Shortcut (${counter}).lnk`;
+      shortcutName = `${targetBaseName} - Shortcut (${counter}).lnk`;
       absoluteShortcutPath = resolvePath(path.join(targetDir, shortcutName));
     }
 
