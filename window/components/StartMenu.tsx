@@ -3,7 +3,7 @@ import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
-import {handleCreateShortcut} from './start-menu/right-click/actions';
+import {buildStartMenuContextMenu} from './start-menu/right-click/actions';
 import {AppDefinition} from '../types';
 
 interface StartMenuProps {
@@ -40,20 +40,13 @@ const StartMenu: React.FC<StartMenuProps> = ({onOpenApp, onClose}) => {
     setContextMenu({x: e.clientX, y: e.clientY, app});
   };
 
-  const contextMenuItems: ContextMenuItem[] = contextMenu
-    ? [
-        {
-          type: 'item',
-          label: 'Open',
-          onClick: () => onOpenApp(contextMenu.app),
-        },
-        {
-          type: 'item',
-          label: 'Create shortcut',
-          onClick: () => handleCreateShortcut(contextMenu.app),
-        },
-      ]
-    : [];
+  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!contextMenu) return [];
+    return buildStartMenuContextMenu({
+      app: contextMenu.app,
+      onOpenApp: onOpenApp,
+    });
+  }, [contextMenu, onOpenApp]);
 
   return (
     <>

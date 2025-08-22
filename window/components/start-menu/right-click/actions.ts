@@ -1,6 +1,10 @@
 import { AppDefinition } from '../../../types';
 import { createFile } from '../../../../services/filesystemService';
 
+import { ContextMenuItem } from '../../ContextMenu';
+
+type OnOpenAppFunction = (app: AppDefinition) => void;
+
 export const handleCreateShortcut = async (app: AppDefinition): Promise<void> => {
   const shortcutContent = {
     name: app.name,
@@ -9,17 +13,38 @@ export const handleCreateShortcut = async (app: AppDefinition): Promise<void> =>
   };
   const fileName = `${app.name}.app`;
   try {
-    // We can add a check here to see if the file already exists
-    // and maybe prompt the user or create a unique name, but for now,
-    // we'll just overwrite. A more robust solution would use `findUniqueName`.
     await createFile(
       '/Desktop',
       fileName,
       JSON.stringify(shortcutContent, null, 2)
     );
-    // Optional: show a success notification to the user
+    // Optional: show a success notification
   } catch (error) {
     console.error(`Failed to create shortcut for ${app.name}:`, error);
-    // Optional: show an error notification to the user
+    // Optional: show an error notification
   }
+};
+
+interface MenuBuilderContext {
+  app: AppDefinition;
+  onOpenApp: OnOpenAppFunction;
+}
+
+export const buildStartMenuContextMenu = (
+  context: MenuBuilderContext,
+): ContextMenuItem[] => {
+  const { app, onOpenApp } = context;
+
+  return [
+    {
+      type: 'item',
+      label: 'Open',
+      onClick: () => onOpenApp(app),
+    },
+    {
+      type: 'item',
+      label: 'Create shortcut',
+      onClick: () => handleCreateShortcut(app),
+    },
+  ];
 };
