@@ -88,9 +88,11 @@ const Taskbar: React.FC<TaskbarProps> = ({
 
             {taskbarApps.map(app => {
               const isPinned = pinnedApps.includes(app.id);
+              // The key must be unique. If the app is open, use its instanceId. Otherwise, fall back to id.
+              const buttonKey = 'instanceId' in app ? app.instanceId : app.id;
               return (
                 <button
-                  key={app.id}
+                  key={buttonKey}
                   onClick={() => handleAppIconClick(app)}
                   onContextMenu={e => handleContextMenu(e, app)}
                   className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out
