@@ -11,6 +11,7 @@ import {
   FilesystemItem,
 } from '../../window/types';
 import * as FsService from '../../services/filesystemService';
+import {getAppsForExtension} from '../../services/fileAssociationService';
 import ContextMenu, {
   ContextMenuItem,
 } from '../../window/components/ContextMenu';
@@ -127,18 +128,34 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
   };
 
   const openItem = useCallback(
-    (item: FilesystemItem) => {
+    async (item: FilesystemItem) => {
       if (renamingItemPath === item.path) return;
       if (item.type === 'folder') {
         navigateTo(item.path);
-      } else if (item.name.endsWith('.app') && item.content) {
+        return;
+      }
+
+      // Handle files
+      if (item.name.endsWith('.app')) {
         try {
-          openApp?.(JSON.parse(item.content));
+          const fileContent = await FsService.readFile(item.path);
+          if (fileContent?.content) {
+            const appInfo = JSON.parse(fileContent.content);
+            openApp?.(appInfo.appId);
+          }
         } catch (e) {
-          console.error('Could not parse app shortcut', e);
+          console.error('Could not parse or open app shortcut', e);
         }
-      } else if (item.type === 'file') {
-        openApp?.('notebook', {file: {path: item.path, name: item.name}});
+      } else {
+        // Handle other files using the association service
+        const extension =
+          '.' + (item.name.split('.').pop() || '').toLowerCase();
+        const associatedApps = await getAppsForExtension(extension);
+
+        const targetAppId =
+          associatedApps.length > 0 ? associatedApps[0].id : 'notebook';
+
+        openApp?.(targetAppId, {filePath: item.path});
       }
     },
     [navigateTo, openApp, renamingItemPath],
@@ -165,32 +182,44 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({
     setRenamingItemPath(null);
   };
 
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!contextMenu) return [];
+  const [contextMenuItems, setContextMenuItems] = useState<ContextMenuItem[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (!contextMenu) {
+      setContextMenuItems([]);
+      return;
+    }
+
     const openAppHandler = openApp || (() => {});
 
-    const menuItems = buildContextMenu({
-      clickedItem: contextMenu.item,
-      currentPath: currentPath,
-      refresh: fetchItems,
-      openApp: openAppHandler,
-      onRename: item => {
-        setRenamingItemPath(item.path);
-        setRenameValue(item.name);
-      },
-      onCopy: handleCopy!,
-      onCut: handleCut!,
-      onPaste: handlePaste!,
-      onOpen: openItem,
-      isPasteDisabled: !clipboard,
-    });
+    const generateMenuItems = async () => {
+      const items = await buildContextMenu({
+        clickedItem: contextMenu.item,
+        currentPath: currentPath,
+        refresh: fetchItems,
+        openApp: openAppHandler,
+        onRename: item => {
+          setRenamingItemPath(item.path);
+          setRenameValue(item.name);
+        },
+        onCopy: handleCopy!,
+        onCut: handleCut!,
+        onPaste: handlePaste!,
+        onOpen: openItem,
+        isPasteDisabled: !clipboard,
+      });
 
-    // Add file explorer specific items
-    if (!contextMenu.item) {
-      menuItems.push({type: 'separator'});
-      menuItems.push({type: 'item', label: 'Refresh', onClick: fetchItems});
-    }
-    return menuItems;
+      // Add file explorer specific items for background menu
+      if (!contextMenu.item) {
+        items.push({type: 'separator'});
+        items.push({type: 'item', label: 'Refresh', onClick: fetchItems});
+      }
+      setContextMenuItems(items);
+    };
+
+    generateMenuItems();
   }, [
     contextMenu,
     openItem,

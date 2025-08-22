@@ -104,43 +104,42 @@ const NotebookApp: React.FC<AppComponentProps> = ({setTitle, initialData}) => {
     const fileIdentifier = initialData?.file as FileIdentifier | undefined;
     const initialContent = initialData?.content as string | undefined;
     const initialName = initialData?.fileName as string | undefined;
-    const remoteFilePath = initialData?.filePath as string | undefined;
+    const directFilePath = initialData?.filePath as string | undefined;
 
     setIsLoading(true);
 
+    const loadFileByPath = async (path: string) => {
+      const fileData = await readFile(path);
+      if (fileData) {
+        setContent(fileData.content);
+        setFilePath(fileData.path);
+        setFileName(fileData.name);
+      } else {
+        setContent(`Error: Could not load file at ${path}`);
+        setFileName('Error');
+      }
+      setIsDirty(false);
+      setIsLoading(false);
+    };
+
     if (typeof initialContent === 'string') {
-      // Handles SFTP/remote files
+      // Handles SFTP/remote files where content is passed directly
       setContent(initialContent);
       setFileName(initialName || 'Untitled Remote File');
-      setFilePath(remoteFilePath); // Store the remote path for context
+      setFilePath(directFilePath); // Store the remote path for context
       setIsDirty(false);
       setIsLoading(false);
     } else if (fileIdentifier?.path) {
-      // Handles local virtual files
-      const loadContent = async () => {
-        const fileData = await readFile(fileIdentifier.path);
-        if (fileData) {
-          setContent(fileData.content);
-          setFilePath(fileData.path);
-          setFileName(fileData.name);
-        } else {
-          setContent(`Error: Could not load file at ${fileIdentifier.path}`);
-          setFileName('Error');
-        }
-        setIsDirty(false);
-        setIsLoading(false);
-      };
-      loadContent();
+      // Handles local virtual files passed as a file object
+      loadFileByPath(fileIdentifier.path);
+    } else if (directFilePath) {
+      // Handles local virtual files passed as just a path
+      loadFileByPath(directFilePath);
     } else {
       // Default to a new, empty document
       handleNew();
     }
-  }, [
-    initialData?.file?.path,
-    initialData?.content,
-    initialData?.fileName,
-    initialData?.filePath,
-  ]);
+  }, [initialData]);
 
   const updateStatusBar = useCallback(() => {
     const textarea = textareaRef.current;
@@ -341,6 +340,7 @@ export const appDefinition: AppDefinition = {
   icon: 'notebook',
   component: NotebookApp,
   defaultSize: {width: 600, height: 500},
+  fileExtensions: ['.txt', '.log'],
 };
 
 export default NotebookApp;

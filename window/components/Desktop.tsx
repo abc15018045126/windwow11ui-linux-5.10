@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {FilesystemItem, AppComponentProps, ClipboardItem} from '../types';
 import * as FsService from '../../services/filesystemService';
+import {getAppsForExtension} from '../../services/fileAssociationService';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
 import {TASKBAR_HEIGHT} from '../constants';
 import {AppContext} from '../contexts/AppContext';
@@ -161,18 +162,34 @@ const Desktop: React.FC<DesktopProps> = ({
     };
   }, [draggingIcon, handleMouseMove, handleMouseUp]);
 
-  const handleDoubleClick = (item: FilesystemItem) => {
+  const handleDoubleClick = async (item: FilesystemItem) => {
     if (renamingIconId === item.path) return;
-    if (item.name.endsWith('.app') && item.content) {
-      try {
-        openApp?.(JSON.parse(item.content));
-      } catch (e) {
-        console.error('Could not parse app shortcut', e);
-      }
-    } else if (item.type === 'file') {
-      openApp?.('notebook', {file: {path: item.path, name: item.name}});
-    } else {
+
+    if (item.type === 'folder') {
       openApp?.('fileExplorer', {initialPath: item.path});
+      return;
+    }
+
+    // Handle files
+    if (item.name.endsWith('.app')) {
+      try {
+        const fileContent = await FsService.readFile(item.path);
+        if (fileContent?.content) {
+          const appInfo = JSON.parse(fileContent.content);
+          openApp?.(appInfo.appId);
+        }
+      } catch (e) {
+        console.error('Could not parse or open app shortcut', e);
+      }
+    } else {
+      // Handle other files using the association service
+      const extension = '.' + (item.name.split('.').pop() || '').toLowerCase();
+      const associatedApps = await getAppsForExtension(extension);
+
+      const targetAppId =
+        associatedApps.length > 0 ? associatedApps[0].id : 'notebook';
+
+      openApp?.(targetAppId, {filePath: item.path});
     }
   };
 
@@ -202,56 +219,66 @@ const Desktop: React.FC<DesktopProps> = ({
     setRenamingIconId(null);
   };
 
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!contextMenu) return [];
+  const [contextMenuItems, setContextMenuItems] = useState<ContextMenuItem[]>(
+    [],
+  );
 
-    // The 'openApp' prop can be undefined, but our builder needs it.
-    // We provide a no-op function if it's not available.
-    const openAppHandler = openApp || (() => {});
-
-    // This is a special case not handled by the builder, which is for file-specific actions.
-    // We can add it to the builder later if needed.
-    if (!contextMenu.item) {
-      const backgroundItems = buildContextMenu({
-        currentPath: DESKTOP_PATH,
-        refresh: fetchDesktopItems,
-        openApp: openAppHandler,
-        onRename: () => {}, // no-op
-        onCopy: () => {}, // no-op
-        onCut: () => {}, // no-op
-        onPaste: handlePaste!,
-        onOpen: () => {}, // no-op
-        isPasteDisabled: !clipboard,
-      });
-      backgroundItems.push({type: 'separator'});
-      backgroundItems.push({
-        type: 'item',
-        label: 'Display Settings',
-        onClick: () => openAppHandler('settings'),
-      });
-      backgroundItems.push({
-        type: 'item',
-        label: 'About This Clone',
-        onClick: () => openAppHandler('about'),
-      });
-      return backgroundItems;
+  useEffect(() => {
+    if (!contextMenu) {
+      setContextMenuItems([]);
+      return;
     }
 
-    return buildContextMenu({
-      clickedItem: contextMenu.item,
-      currentPath: DESKTOP_PATH,
-      refresh: fetchDesktopItems,
-      openApp: openAppHandler,
-      onRename: item => {
-        setRenamingIconId(item.path);
-        setRenameValue(item.name);
-      },
-      onCopy: handleCopy!,
-      onCut: handleCut!,
-      onPaste: handlePaste!,
-      onOpen: handleDoubleClick,
-      isPasteDisabled: !clipboard,
-    });
+    const openAppHandler = openApp || (() => {});
+
+    const generateMenuItems = async () => {
+      if (!contextMenu.item) {
+        // Background context menu
+        const backgroundItems = await buildContextMenu({
+          currentPath: DESKTOP_PATH,
+          refresh: fetchDesktopItems,
+          openApp: openAppHandler,
+          onRename: () => {},
+          onCopy: () => {},
+          onCut: () => {},
+          onPaste: handlePaste!,
+          onOpen: () => {},
+          isPasteDisabled: !clipboard,
+        });
+        backgroundItems.push({type: 'separator'});
+        backgroundItems.push({
+          type: 'item',
+          label: 'Display Settings',
+          onClick: () => openAppHandler('settings'),
+        });
+        backgroundItems.push({
+          type: 'item',
+          label: 'About This Clone',
+          onClick: () => openAppHandler('about'),
+        });
+        setContextMenuItems(backgroundItems);
+      } else {
+        // Item context menu
+        const items = await buildContextMenu({
+          clickedItem: contextMenu.item,
+          currentPath: DESKTOP_PATH,
+          refresh: fetchDesktopItems,
+          openApp: openAppHandler,
+          onRename: item => {
+            setRenamingIconId(item.path);
+            setRenameValue(item.name);
+          },
+          onCopy: handleCopy!,
+          onCut: handleCut!,
+          onPaste: handlePaste!,
+          onOpen: handleDoubleClick,
+          isPasteDisabled: !clipboard,
+        });
+        setContextMenuItems(items);
+      }
+    };
+
+    generateMenuItems();
   }, [
     contextMenu,
     openApp,
@@ -260,7 +287,6 @@ const Desktop: React.FC<DesktopProps> = ({
     handleCut,
     handlePaste,
     fetchDesktopItems,
-    apps,
   ]);
 
   const handleDesktopClick = (e: React.MouseEvent) => {
