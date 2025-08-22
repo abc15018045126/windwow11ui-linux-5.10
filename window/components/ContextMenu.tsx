@@ -39,11 +39,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({x, y, items, onClose}) => {
       ref={menuRef}
       style={{top: finalY, left: finalX}}
       className="fixed bg-black/80 backdrop-blur-xl border border-zinc-700 rounded-md shadow-lg py-1.5 w-48 text-sm text-zinc-100 z-[60] animate-fade-in-fast"
-      onClick={e => {
-        e.stopPropagation(); // Prevent clicks inside menu from bubbling up to a dismiss handler
-        onClose(); // Close on any item click
-      }}
-      onContextMenu={e => e.preventDefault()} // Prevent native context menu on our custom one
+      // Stop propagation to prevent the 'outside click' handler from firing
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => e.preventDefault()}
     >
       {items.map((item, index) => {
         if (item.type === 'separator') {
@@ -52,7 +50,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({x, y, items, onClose}) => {
         return (
           <button
             key={index}
-            onClick={item.onClick}
+            onClick={() => {
+              item.onClick();
+              onClose();
+            }}
             disabled={item.disabled}
             className="w-full text-left px-3 py-1.5 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm flex items-center"
           >
