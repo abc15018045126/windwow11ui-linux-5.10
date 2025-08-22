@@ -47,6 +47,10 @@ interface IconProps extends AppIconProps {
   iconName?: string;
 }
 
+export const isValidIcon = (iconName: string): boolean => {
+  return iconName in iconMap;
+};
+
 export const Icon: React.FC<IconProps> = ({iconName, ...rest}) => {
   if (!iconName) {
     return <Icons.FileGenericIcon {...rest} />;

@@ -12,7 +12,7 @@ import {getAppsForExtension} from '../../services/fileAssociationService';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
 import {TASKBAR_HEIGHT} from '../constants';
 import {AppContext} from '../contexts/AppContext';
-import Icon from './icon';
+import Icon, {isValidIcon} from './icon';
 import {buildContextMenu} from './file/right-click';
 
 const GRID_SIZE = 90;
@@ -32,12 +32,19 @@ const DesktopItemIcon: React.FC<{item: FilesystemItem}> = ({item}) => {
   let iconName = 'fileGeneric';
   if (item.type === 'folder') {
     iconName = 'folder';
-  } else if (item.name.endsWith('.app') && item.content) {
-    try {
-      const appInfo = JSON.parse(item.content);
-      if (appInfo.icon) iconName = appInfo.icon;
-    } catch (e) {
-      // It's okay if the content is not valid JSON, we just fall back to the default icon.
+  } else if (item.name.endsWith('.app')) {
+    // Default for .app files, in case of parsing error or invalid icon
+    iconName = 'fileGeneric';
+    if (item.content) {
+      try {
+        const appInfo = JSON.parse(item.content);
+        // Only use the icon from the file if it's a valid, known icon
+        if (appInfo.icon && isValidIcon(appInfo.icon)) {
+          iconName = appInfo.icon;
+        }
+      } catch (e) {
+        // It's okay if the content is not valid JSON, we just fall back to the default icon.
+      }
     }
   } else {
     if (

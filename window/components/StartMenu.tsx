@@ -1,6 +1,6 @@
 import React, {useState, useMemo, useContext, useRef, useEffect} from 'react';
 import {AppContext} from '../contexts/AppContext';
-import Icon from './icon';
+import Icon, {isValidIcon} from './icon';
 import {useTheme} from '../theme';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
 import * as FsService from '../../services/filesystemService';
@@ -152,26 +152,29 @@ const StartMenu: React.FC<StartMenuProps> = ({
               </div>
               <div className="flex-grow overflow-y-auto custom-scrollbar -mr-4 pr-4">
                 <div className="space-y-1">
-                  {sortedApps.map(app => (
-                    <button
-                      key={`all-${app.id}`}
-                      onClick={() => {
-                        onOpenApp(app);
-                        onClose();
-                      }}
-                      onContextMenu={e => handleContextMenu(e, app)}
-                      className={`w-full flex items-center p-2 rounded-md transition-colors ${theme.startMenu.buttonHover}`}
-                      title={app.name}
-                    >
-                      <Icon
-                        iconName={app.icon}
-                        className="w-6 h-6 mr-4 flex-shrink-0"
-                      />
-                      <span className="text-sm text-left truncate">
-                        {app.name}
-                      </span>
-                    </button>
-                  ))}
+                  {sortedApps.map(app => {
+                    const iconName = isValidIcon(app.icon) ? app.icon : 'fileGeneric';
+                    return (
+                      <button
+                        key={`all-${app.id}`}
+                        onClick={() => {
+                          onOpenApp(app);
+                          onClose();
+                        }}
+                        onContextMenu={e => handleContextMenu(e, app)}
+                        className={`w-full flex items-center p-2 rounded-md transition-colors ${theme.startMenu.buttonHover}`}
+                        title={app.name}
+                      >
+                        <Icon
+                          iconName={iconName}
+                          className="w-6 h-6 mr-4 flex-shrink-0"
+                        />
+                        <span className="text-sm text-left truncate">
+                          {app.name}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -188,23 +191,26 @@ const StartMenu: React.FC<StartMenuProps> = ({
                   </button>
                 </div>
                 <div className="grid grid-cols-6 gap-4">
-                  {pinnedApps.map(app => (
-                    <button
-                      key={app.id}
-                      onClick={() => {
-                        onOpenApp(app);
-                        onClose();
-                      }}
-                      onContextMenu={e => handleContextMenu(e, app)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors aspect-square ${theme.startMenu.pinnedButton}`}
-                      title={app.name}
-                    >
-                      <Icon iconName={app.icon} className="w-8 h-8 mb-1.5" />
-                      <span className="text-xs text-center truncate w-full">
-                        {app.name}
-                      </span>
-                    </button>
-                  ))}
+                  {pinnedApps.map(app => {
+                    const iconName = isValidIcon(app.icon) ? app.icon : 'fileGeneric';
+                    return (
+                      <button
+                        key={app.id}
+                        onClick={() => {
+                          onOpenApp(app);
+                          onClose();
+                        }}
+                        onContextMenu={e => handleContextMenu(e, app)}
+                        className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors aspect-square ${theme.startMenu.pinnedButton}`}
+                        title={app.name}
+                      >
+                        <Icon iconName={iconName} className="w-8 h-8 mb-1.5" />
+                        <span className="text-xs text-center truncate w-full">
+                          {app.name}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
@@ -212,26 +218,29 @@ const StartMenu: React.FC<StartMenuProps> = ({
                   Recommended
                 </h2>
                 <div className="space-y-2">
-                  {recommendedApps.map(app => (
-                    <button
-                      key={`rec-${app.id}`}
-                      onClick={() => {
-                        onOpenApp(app);
-                        onClose();
-                      }}
-                      onContextMenu={e => handleContextMenu(e, app)}
-                      className={`w-full flex items-center p-2 rounded-md transition-colors ${theme.startMenu.buttonHover}`}
-                      title={app.name}
-                    >
-                      <Icon
-                        iconName={app.icon}
-                        className="w-6 h-6 mr-3 flex-shrink-0"
-                      />
-                      <span className="text-sm text-left truncate">
-                        {app.name}
-                      </span>
-                    </button>
-                  ))}
+                  {recommendedApps.map(app => {
+                    const iconName = isValidIcon(app.icon) ? app.icon : 'fileGeneric';
+                    return (
+                      <button
+                        key={`rec-${app.id}`}
+                        onClick={() => {
+                          onOpenApp(app);
+                          onClose();
+                        }}
+                        onContextMenu={e => handleContextMenu(e, app)}
+                        className={`w-full flex items-center p-2 rounded-md transition-colors ${theme.startMenu.buttonHover}`}
+                        title={app.name}
+                      >
+                        <Icon
+                          iconName={iconName}
+                          className="w-6 h-6 mr-3 flex-shrink-0"
+                        />
+                        <span className="text-sm text-left truncate">
+                          {app.name}
+                        </span>
+                      </button>
+                    );
+                  })}
                   {recommendedApps.length === 0 && (
                     <p className="text-xs text-zinc-400">
                       No recommendations yet.
