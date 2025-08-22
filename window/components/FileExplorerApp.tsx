@@ -432,6 +432,7 @@ export const appDefinition: AppDefinition = {
   component: FileExplorerApp,
   defaultSize: {width: 800, height: 600},
   isPinnedToTaskbar: true,
+  allowMultipleInstances: true,
 };
 
 export default FileExplorerApp;

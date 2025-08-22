@@ -66,6 +66,7 @@ export interface AppDefinition {
   component: AppComponentType;
   defaultSize?: {width: number; height: number};
   isPinnedToTaskbar?: boolean; // To show on taskbar by default
+  allowMultipleInstances?: boolean; // To allow multiple windows of the same app
   isExternal?: boolean; // To launch as a separate Electron process
   externalPath?: string; // Path relative to app root for the external app
   fileExtensions?: string[]; // Supported file extensions for 'Open With'

@@ -110,7 +110,8 @@ export const useWindowManager = (
         return;
       }
 
-      if (!initialData) {
+      // If multiple instances are not allowed, check for an existing instance
+      if (!appDef.allowMultipleInstances && !initialData) {
         const existingAppInstance = openApps.find(
           app => app.id === appDef!.id && !app.isMinimized,
         );
@@ -312,35 +313,31 @@ export const useWindowManager = (
   };
 
   const taskbarApps = useMemo(() => {
-    const apps = new Map<
-      string,
-      (AppDefinition | OpenApp) & {isOpen: boolean; isActive: boolean}
-    >();
+    const runningInstanceAppIds = new Set(openApps.map(app => app.id));
 
-    // 1. Add all pinned apps, ensuring they have a base definition
-    pinnedApps.forEach(appId => {
-      const appDef = appDefinitions.find(def => def.id === appId);
-      if (appDef) {
-        apps.set(appId, {
-          ...appDef,
-          isOpen: false,
-          isActive: false,
-        });
-      }
-    });
+    // Get pinned apps that are not currently running
+    const pinnedAndNotRunning = pinnedApps
+      .map(appId => appDefinitions.find(def => def.id === appId))
+      .filter(
+        (appDef): appDef is AppDefinition =>
+          !!appDef && !runningInstanceAppIds.has(appDef.id),
+      );
 
-    // 2. Add all open apps, which will overwrite the pinned placeholders
-    //    This ensures that if an app is pinned, we use the more detailed
-    //    'OpenApp' state when it's running.
-    openApps.forEach(openApp => {
-      apps.set(openApp.id, {
-        ...openApp,
+    // Combine the running apps with the non-running pinned apps
+    const combined = [
+      ...openApps.map(app => ({
+        ...app,
         isOpen: true,
-        isActive: openApp.instanceId === activeAppInstanceId,
-      });
-    });
+        isActive: app.instanceId === activeAppInstanceId,
+      })),
+      ...pinnedAndNotRunning.map(appDef => ({
+        ...appDef,
+        isOpen: false,
+        isActive: false,
+      })),
+    ];
 
-    return Array.from(apps.values());
+    return combined;
   }, [pinnedApps, openApps, appDefinitions, activeAppInstanceId]);
 
   // The hook returns everything the App component needs

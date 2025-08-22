@@ -341,6 +341,7 @@ export const appDefinition: AppDefinition = {
   component: NotebookApp,
   defaultSize: {width: 600, height: 500},
   fileExtensions: ['.txt', '.log'],
+  allowMultipleInstances: true,
 };
 
 export default NotebookApp;
