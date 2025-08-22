@@ -72,10 +72,17 @@ export const useWindowManager = (
       if (typeof appIdentifier === 'string') {
         baseAppDef = appDefinitions.find(app => app.id === appIdentifier);
       } else {
-        // It's an object, likely from a .app file. It must have an appId property.
         const appInfo = appIdentifier as any;
+        // Case 1: From a .app file, which has 'appId'
         if (appInfo.appId) {
           baseAppDef = appDefinitions.find(app => app.id === appInfo.appId);
+          appOverrides = appInfo;
+        }
+        // Case 2: From a direct AppDefinition object, which has 'id'
+        else if (appInfo.id) {
+          baseAppDef = appDefinitions.find(app => app.id === appInfo.id);
+          // When passed a full AppDefinition, there are no overrides,
+          // we're just using the definition itself. But we merge to ensure consistency.
           appOverrides = appInfo;
         }
       }
@@ -89,10 +96,10 @@ export const useWindowManager = (
         return;
       }
 
-      // Merge the base definition with any overrides from the .app file
+      // Merge the base definition with any overrides.
       const appDef: AppDefinition = {...baseAppDef, ...appOverrides};
 
-      if (!appDef) {
+      if (!appDef.id) {
         const id =
           typeof appIdentifier === 'string'
             ? appIdentifier
