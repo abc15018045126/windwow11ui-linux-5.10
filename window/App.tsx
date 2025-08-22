@@ -90,7 +90,9 @@ const App: React.FC = () => {
   }, [isStartMenuOpen]);
 
   return (
-    <AppContext.Provider value={{apps: appDefinitions}}>
+    <AppContext.Provider
+      value={{apps: appDefinitions, refreshApps: triggerRefresh}}
+    >
       <ThemeContext.Provider value={{theme, setTheme: handleThemeChange}}>
         <div
           ref={desktopRef}

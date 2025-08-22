@@ -3,9 +3,9 @@ import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
 import ContextMenu, {ContextMenuItem} from './ContextMenu';
-import {buildContextMenu} from './file/right-click';
 import * as FsService from '../../services/filesystemService';
 import {AppDefinition, FilesystemItem} from '../types';
+import {buildContextMenu} from './file/right-click';
 
 interface StartMenuProps {
   onOpenApp: (app: AppDefinition) => void;
@@ -50,13 +50,13 @@ const StartMenu: React.FC<StartMenuProps> = ({
     app: AppDefinition,
   ) => {
     e.preventDefault();
+    e.stopPropagation();
 
     const allAppsPath = '/All Apps';
     const appFileName = `${app.name}.app`;
     const appFilePath = `${allAppsPath}/${appFileName}`;
 
     try {
-      // 1. Ensure /All Apps folder exists
       const rootItems = await FsService.listDirectory('/');
       const allAppsFolderExists = rootItems.some(
         item => item.name === 'All Apps' && item.type === 'folder',
@@ -65,14 +65,12 @@ const StartMenu: React.FC<StartMenuProps> = ({
         await FsService.createFolder('/', 'All Apps');
       }
 
-      // 2. Ensure the .app file exists inside /All Apps
       const allAppsItems = await FsService.listDirectory(allAppsPath);
       let appFileItem = allAppsItems.find(item => item.name === appFileName);
 
       if (!appFileItem) {
         const appFileContent = JSON.stringify({appId: app.id, icon: app.icon});
         await FsService.createFile(allAppsPath, appFileName, appFileContent);
-        // Manually construct the item as it wasn't in the list before
         appFileItem = {
           name: appFileName,
           path: appFilePath,
@@ -81,11 +79,10 @@ const StartMenu: React.FC<StartMenuProps> = ({
         };
       }
 
-      // 3. Now build the full context menu using the file-based builder
       const menuItems = await buildContextMenu({
         clickedItem: appFileItem,
         currentPath: allAppsPath,
-        refresh: refreshApps, // Refresh the app list if an item is deleted/renamed
+        refresh: refreshApps || (() => {}),
         openApp: (appIdOrDef, data) => {
           const appDef =
             typeof appIdOrDef === 'string'
@@ -93,12 +90,12 @@ const StartMenu: React.FC<StartMenuProps> = ({
               : appIdOrDef;
           if (appDef) onOpenApp(appDef);
         },
-        onRename: () => alert('Rename not supported from Start Menu.'), // Placeholder
+        onRename: () => alert('Rename not supported from Start Menu.'),
         onCopy: onCopy,
         onCut: onCut,
         onPaste: onPaste,
-        onOpen: item => onOpenApp(app), // Open the abstract app, not the file
-        isPasteDisabled: true, // Pasting in this context doesn't make sense
+        onOpen: () => onOpenApp(app),
+        isPasteDisabled: true,
       });
 
       setContextMenu({x: e.clientX, y: e.clientY, items: menuItems});
