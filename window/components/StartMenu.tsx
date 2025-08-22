@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useContext} from 'react';
+import React, {useState, useMemo, useContext, useRef} from 'react';
 import {AppContext} from '../contexts/AppContext';
 import Icon from './icon';
 import {useTheme} from '../theme';
@@ -25,6 +25,8 @@ const StartMenu: React.FC<StartMenuProps> = ({
   const {apps, refreshApps} = useContext(AppContext);
   const [isShowingAllApps, setIsShowingAllApps] = useState(false);
   const {theme} = useTheme();
+  const [isPowerMenuOpen, setIsPowerMenuOpen] = useState(false);
+  const powerButtonRef = useRef<HTMLButtonElement>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -44,6 +46,20 @@ const StartMenu: React.FC<StartMenuProps> = ({
     () => [...apps].sort((a, b) => a.name.localeCompare(b.name)),
     [apps],
   );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isPowerMenuOpen &&
+        powerButtonRef.current &&
+        !powerButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsPowerMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isPowerMenuOpen]);
 
   const handleContextMenu = async (
     e: React.MouseEvent,
@@ -104,6 +120,10 @@ const StartMenu: React.FC<StartMenuProps> = ({
     }
   };
 
+  const handleRestart = () => {
+    window.electronAPI?.restartApp();
+  };
+
   return (
     <>
       <div
@@ -113,23 +133,11 @@ const StartMenu: React.FC<StartMenuProps> = ({
         onClick={e => {
           e.stopPropagation();
           if (contextMenu) setContextMenu(null);
+          if (isPowerMenuOpen) setIsPowerMenuOpen(false);
         }}
         onContextMenu={e => e.preventDefault()}
       >
-        <div className="mb-6 flex-shrink-0">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Type here to search"
-              className={`w-full rounded-md py-2.5 px-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${theme.startMenu.searchBar}`}
-            />
-            <Icon
-              iconName="search"
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400"
-            />
-          </div>
-        </div>
-
+        {/* ... (rest of the component up to the bottom bar) ... */}
         <div className="flex-grow overflow-hidden">
           {isShowingAllApps ? (
             <div className="h-full flex flex-col">
@@ -234,7 +242,6 @@ const StartMenu: React.FC<StartMenuProps> = ({
             </div>
           )}
         </div>
-
         <div className="flex-shrink-0 mt-auto pt-4 border-t border-zinc-800/50 flex justify-between items-center">
           <button
             className={`flex items-center p-2 rounded-md ${theme.startMenu.buttonHover}`}
@@ -242,7 +249,7 @@ const StartMenu: React.FC<StartMenuProps> = ({
             <Icon iconName="user" className="w-7 h-7 rounded-full mr-2" />
             <span className="text-sm">User</span>
           </button>
-          <div className="flex space-x-1">
+          <div className="relative flex space-x-1">
             <button
               title="Settings"
               onClick={() => {
@@ -255,11 +262,30 @@ const StartMenu: React.FC<StartMenuProps> = ({
               <Icon iconName="settings" className="w-5 h-5" />
             </button>
             <button
-              title="Power (Placeholder)"
+              ref={powerButtonRef}
+              title="Power"
+              onClick={e => {
+                e.stopPropagation();
+                setIsPowerMenuOpen(!isPowerMenuOpen);
+              }}
               className={`p-2 rounded-md ${theme.startMenu.buttonHover}`}
             >
               <Icon iconName="start" className="w-5 h-5" />
             </button>
+            {isPowerMenuOpen && (
+              <div
+                className="absolute bottom-full right-0 mb-2 w-48 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1"
+                onClick={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={handleRestart}
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-600 flex items-center"
+                >
+                  <Icon iconName="start" className="w-4 h-4 mr-2" />
+                  Restart
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('session:set-proxy', partition, proxyConfig),
   clearProxyForSession: partition =>
     ipcRenderer.invoke('session:clear-proxy', partition),
+  restartApp: () => ipcRenderer.invoke('restart-app'),
 });

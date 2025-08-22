@@ -1,7 +1,12 @@
-const {ipcMain, session} = require('electron');
+const {ipcMain, session, app} = require('electron');
 const {launchExternalAppByPath} = require('./launcher');
 
 function initializeIpcHandlers() {
+  ipcMain.handle('restart-app', () => {
+    app.relaunch();
+    app.quit();
+  });
+
   ipcMain.handle('app:launchExternal', (event, relativeAppPath, args) => {
     return launchExternalAppByPath(relativeAppPath, args);
   });
