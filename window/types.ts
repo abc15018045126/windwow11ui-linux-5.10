@@ -68,6 +68,7 @@ export interface AppDefinition {
   isPinnedToTaskbar?: boolean; // To show on taskbar by default
   isExternal?: boolean; // To launch as a separate Electron process
   externalPath?: string; // Path relative to app root for the external app
+  fileExtensions?: string[]; // Supported file extensions for 'Open With'
 }
 
 export interface OpenApp extends AppDefinition {
