@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {AppDefinition, OpenApp} from '../types';
 import {TASKBAR_HEIGHT} from '../constants';
 import {useTheme} from '../theme';
-import Icon from './icon';
+import Icon, {isValidIcon} from './icon';
 import {useWindowManager} from '../hooks/useWindowManager';
 import TaskbarContextMenu from './taskbar/right-click/TaskbarContextMenu';
 
@@ -90,6 +90,8 @@ const Taskbar: React.FC<TaskbarProps> = ({
               const isPinned = pinnedApps.includes(app.id);
               // The key must be unique. If the app is open, use its instanceId. Otherwise, fall back to id.
               const buttonKey = 'instanceId' in app ? app.instanceId : app.id;
+              const iconName = isValidIcon(app.icon) ? app.icon : 'fileGeneric';
+
               return (
                 <button
                   key={buttonKey}
@@ -99,7 +101,7 @@ const Taskbar: React.FC<TaskbarProps> = ({
                             ${app.isActive ? theme.taskbar.activeButton : theme.taskbar.buttonHover}`}
                   title={app.name}
                 >
-                  <Icon iconName={app.icon} className="w-5 h-5" isSmall />
+                  <Icon iconName={iconName} className="w-5 h-5" isSmall />
                   {app.isOpen && (
                     <span
                       className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 h-1 rounded-t-sm
