@@ -1,6 +1,7 @@
 const path = require('path');
 const {spawn} = require('child_process');
 const {FS_ROOT} = require('./constants');
+const {add, remove} = require('./child-process-store');
 
 function launchExternalAppByPath(relativeAppPath, args = []) {
   try {
@@ -48,8 +49,10 @@ function launchExternalAppByPath(relativeAppPath, args = []) {
           `[Launcher] Subprocess for ${appName} exited with code ${code} and signal ${signal}`,
         );
       }
+      remove(child); // Remove from tracking when it exits
     });
 
+    add(child); // Add to tracking
     child.unref();
 
     return true;

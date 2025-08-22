@@ -1,8 +1,28 @@
 const {ipcMain, session, app} = require('electron');
 const {launchExternalAppByPath} = require('./launcher');
+const childProcessStore = require('./child-process-store');
 
 function initializeIpcHandlers() {
-  ipcMain.handle('restart-app', () => {
+  ipcMain.handle('restart-app', async () => {
+    const children = childProcessStore.getAll();
+    if (children.length > 0) {
+      const exitPromises = children.map(child => {
+        return new Promise(resolve => {
+          child.on('exit', () => {
+            resolve();
+          });
+        });
+      });
+
+      children.forEach(child => {
+        child.kill();
+      });
+
+      await Promise.all(exitPromises);
+    }
+
+    // All children have exited, now we can restart.
+    childProcessStore.clear(); // Clear the store just in case
     app.relaunch();
     app.quit();
   });
