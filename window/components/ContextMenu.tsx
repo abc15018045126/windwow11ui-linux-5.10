@@ -1,37 +1,20 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef} from 'react';
 
 export type ContextMenuItem =
   | {type: 'item'; label: string; onClick: () => void; disabled?: boolean}
-  | {type: 'separator'}
-  | {
-      type: 'submenu';
-      label: string;
-      submenu: ContextMenuItem[];
-      disabled?: boolean;
-    };
+  | {type: 'separator'};
 
 interface ContextMenuProps {
   x: number;
   y: number;
   items: ContextMenuItem[];
   onClose: () => void;
-  isSubMenu?: boolean;
 }
 
-const ContextMenu: React.FC<ContextMenuProps> = ({
-  x,
-  y,
-  items,
-  onClose,
-  isSubMenu = false,
-}) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({x, y, items, onClose}) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [activeSubMenu, setActiveSubMenu] = useState<number | null>(null);
-  const subMenuLeaveTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isSubMenu) return; // Only top-level menu should have outside click handler
-
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
@@ -39,93 +22,37 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose, isSubMenu]);
+  }, [onClose]);
 
-  const handleItemClick = (onClick: () => void) => {
-    // The responsibility of closing the menu is now on the caller,
-    // which defines the onClick handler. This prevents race conditions.
-    onClick();
-  };
-
-  const handleSubMenuEnter = (index: number) => {
-    if (subMenuLeaveTimer.current) {
-      clearTimeout(subMenuLeaveTimer.current);
-    }
-    setActiveSubMenu(index);
-  };
-
-  const handleSubMenuLeave = () => {
-    subMenuLeaveTimer.current = setTimeout(() => {
-      setActiveSubMenu(null);
-    }, 200); // A small delay to allow moving mouse to submenu
-  };
-
-  const menuWidth = 192;
+  // Adjust position to stay within viewport
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
-  const menuHeight = items.reduce(
-    (acc, item) => acc + (item.type === 'separator' ? 9 : 30),
-    12,
-  );
+  const menuWidth = 180; // Estimated width
+  const menuHeight = items.length * 32; // Estimated height
 
-  let finalX = x;
-  let finalY = y;
-
-  if (isSubMenu) {
-    if (x + menuWidth * 2 > screenWidth) {
-      finalX = x - menuWidth; // Open to the left
-    } else {
-      finalX = x + menuWidth; // Open to the right
-    }
-    finalY = y - 6; // Align with parent item
-  } else {
-    if (x + menuWidth > screenWidth) finalX = screenWidth - menuWidth - 5;
-    if (y + menuHeight > screenHeight) finalY = screenHeight - menuHeight - 5;
-  }
+  const finalX = x + menuWidth > screenWidth ? screenWidth - menuWidth - 5 : x;
+  const finalY =
+    y + menuHeight > screenHeight ? screenHeight - menuHeight - 5 : y;
 
   return (
     <div
       ref={menuRef}
-      style={{top: `${finalY}px`, left: `${finalX}px`}}
+      style={{top: finalY, left: finalX}}
       className="fixed bg-black/80 backdrop-blur-xl border border-zinc-700 rounded-md shadow-lg py-1.5 w-48 text-sm text-zinc-100 z-[60] animate-fade-in-fast"
-      onClick={e => e.stopPropagation()}
-      onContextMenu={e => e.preventDefault()}
+      onClick={e => {
+        e.stopPropagation(); // Prevent clicks inside menu from bubbling up to a dismiss handler
+        onClose(); // Close on any item click
+      }}
+      onContextMenu={e => e.preventDefault()} // Prevent native context menu on our custom one
     >
       {items.map((item, index) => {
         if (item.type === 'separator') {
           return <div key={index} className="h-px bg-zinc-700 my-1.5" />;
         }
-        if (item.type === 'submenu') {
-          return (
-            <div
-              key={index}
-              className="relative"
-              onMouseEnter={() => handleSubMenuEnter(index)}
-              onMouseLeave={handleSubMenuLeave}
-            >
-              <button
-                disabled={item.disabled}
-                className="w-full text-left px-3 py-1.5 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm flex items-center justify-between"
-              >
-                <span>{item.label}</span>
-                <span className="text-xs">▶</span>
-              </button>
-              {activeSubMenu === index && (
-                <ContextMenu
-                  x={finalX}
-                  y={finalY + index * 30} // Approximate position
-                  items={item.submenu}
-                  onClose={onClose}
-                  isSubMenu
-                />
-              )}
-            </div>
-          );
-        }
         return (
           <button
             key={index}
-            onClick={() => handleItemClick(item.onClick)}
+            onClick={item.onClick}
             disabled={item.disabled}
             className="w-full text-left px-3 py-1.5 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm flex items-center"
           >
